@@ -87,42 +87,70 @@
           </div>
         </div>
         <!-- Filters -->
-        <div class="flex items-center gap-3">
-          <div class="flex-1 relative">
-            <label class="block text-xs text-gray-600 mb-1">List Filter</label>
-            <div class="relative">
+        <div class="space-y-2">
+          <!-- First Row: Name Search and List Filter -->
+          <div class="flex items-center gap-3">
+            <div class="flex-1 relative">
+              <label class="block text-xs text-gray-600 mb-1">Search by Name</label>
               <input 
                 type="text" 
-                id="list-filter-input" 
-                class="w-full border rounded-lg px-3 py-1.5 pr-8 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green"
-                placeholder="Search or select list..."
+                id="name-search-input" 
+                class="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green"
+                placeholder="Search first or last name..."
                 autocomplete="off"
               >
-              <button 
-                id="list-filter-toggle" 
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                type="button"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div 
-                id="list-filter-dropdown" 
-                class="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
-              >
-                <div 
-                  class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer list-filter-option" 
-                  data-value="all"
+            </div>
+            <div class="flex-1 relative">
+              <label class="block text-xs text-gray-600 mb-1">List Filter</label>
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="list-filter-input" 
+                  class="w-full border rounded-lg px-3 py-1.5 pr-8 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green"
+                  placeholder="Search or select list..."
+                  autocomplete="off"
                 >
-                  All Lists
+                <button 
+                  id="list-filter-toggle" 
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  type="button"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                <div 
+                  id="list-filter-dropdown" 
+                  class="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+                >
+                  <div 
+                    class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer list-filter-option" 
+                    data-value="all"
+                  >
+                    All Lists
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="flex items-center pt-6">
-            <input type="checkbox" id="unsent-filter" class="w-4 h-4 text-savvy-green rounded" checked>
-            <label for="unsent-filter" class="ml-2 text-xs text-gray-700">Unsent Only</label>
+          <!-- Second Row: Status, DoNotCall, and Unsent Filters -->
+          <div class="flex items-center gap-3">
+            <div class="flex-1 relative">
+              <label class="block text-xs text-gray-600 mb-1">Status</label>
+              <select id="status-filter" class="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green">
+                <option value="all">All Statuses</option>
+              </select>
+            </div>
+            <div class="flex items-center pt-6 gap-4">
+              <div class="flex items-center">
+                <input type="checkbox" id="donotcall-filter" class="w-4 h-4 text-savvy-green rounded">
+                <label for="donotcall-filter" class="ml-2 text-xs text-gray-700">Exclude Do Not Call</label>
+              </div>
+              <div class="flex items-center">
+                <input type="checkbox" id="unsent-filter" class="w-4 h-4 text-savvy-green rounded" checked>
+                <label for="unsent-filter" class="ml-2 text-xs text-gray-700">Unsent Only</label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -155,6 +183,13 @@
             <span id="lead-score" class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium hidden">
               Score: 85
             </span>
+            <!-- Salesforce Link -->
+            <a id="salesforce-link" href="#" target="_blank" class="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden" title="Open Salesforce Record">
+              <svg class="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#00A1E0" d="M20.012 10.83c1.476-1.528 3.53-2.475 5.806-2.475 2.972 0 5.627 1.627 7.013 4.035a9.635 9.635 0 0 1 4.078-.903c5.377 0 9.736 4.396 9.736 9.817 0 5.422-4.359 9.818-9.736 9.818-.622 0-1.23-.058-1.82-.17a7.584 7.584 0 0 1-6.62 3.876 7.543 7.543 0 0 1-4.256-1.312 8.853 8.853 0 0 1-7.343 3.9c-4.441 0-8.156-3.268-8.799-7.55a8.31 8.31 0 0 1-1.442.128C2.93 29.994 0 27.032 0 23.395c0-2.987 1.977-5.511 4.693-6.324a7.848 7.848 0 0 1-.204-1.748c0-4.396 3.569-7.96 7.972-7.96 2.665 0 5.022 1.307 6.474 3.316l.077.151z"/>
+              </svg>
+            </a>
+            <!-- LinkedIn Link -->
             <a id="linkedin-link" href="#" target="_blank" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Open LinkedIn Profile">
               <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>

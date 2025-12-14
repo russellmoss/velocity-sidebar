@@ -11,7 +11,7 @@ import type {
   MessageTemplate,
   ChromeMessage,
 } from '../types';
-import { DEFAULT_TEMPLATES } from '../types';
+import { DEFAULT_TEMPLATES, getSalesforceUrl } from '../types';
 import { fetchLeads, logActivity, initApiConfig, setApiConfig, testN8nConnection, testN8nLoggingConnection } from '../lib/api';
 import { authenticateUser, getAuthState, isAuthenticatedWithValidDomain } from '../lib/auth';
 import { 
@@ -48,6 +48,9 @@ interface AppState {
   isSyncing: boolean;
   uniqueLists: string[];
   selectedListFilter: string;
+  uniqueStatuses: string[];
+  selectedStatusFilter: string;
+  nameSearchQuery: string;
 }
 
 const state: AppState = {
@@ -60,6 +63,9 @@ const state: AppState = {
   isSyncing: false,
   uniqueLists: [],
   selectedListFilter: 'all',
+  uniqueStatuses: [],
+  selectedStatusFilter: 'all',
+  nameSearchQuery: '',
 };
 
 // -----------------------------------------------------------------------------
@@ -92,6 +98,7 @@ const elements = {
   leadAccreditations: document.getElementById('lead-accreditations') as HTMLDivElement,
   leadScore: document.getElementById('lead-score') as HTMLSpanElement,
   linkedinLink: document.getElementById('linkedin-link') as HTMLAnchorElement,
+  salesforceLink: document.getElementById('salesforce-link') as HTMLAnchorElement,
   alreadySentBadge: document.getElementById('already-sent-badge') as HTMLDivElement,
   scrapeStatus: document.getElementById('scrape-status') as HTMLDivElement,
   
@@ -115,6 +122,9 @@ const elements = {
   listFilterInput: document.getElementById('list-filter-input') as HTMLInputElement,
   listFilterDropdown: document.getElementById('list-filter-dropdown') as HTMLDivElement,
   listFilterToggle: document.getElementById('list-filter-toggle') as HTMLButtonElement,
+  nameSearchInput: document.getElementById('name-search-input') as HTMLInputElement,
+  statusFilter: document.getElementById('status-filter') as HTMLSelectElement,
+  doNotCallFilter: document.getElementById('donotcall-filter') as HTMLInputElement,
   unsentFilter: document.getElementById('unsent-filter') as HTMLInputElement,
   
   // Template Manager Elements
@@ -174,9 +184,11 @@ async function init(): Promise<void> {
     // Load cached leads first (instant UI)
     state.leads = sortLeadsByLastName(await getCachedLeads());
     
-    // Extract unique lists and populate filter
+    // Extract unique lists and statuses, populate filters
     extractUniqueLists(state.leads);
+    extractUniqueStatuses(state.leads);
     populateListFilter();
+    populateStatusFilter();
     
     updateLeadUI();
     
@@ -293,6 +305,15 @@ function setupEventListeners(): void {
   });
   
   elements.unsentFilter.addEventListener('change', handleUnsentFilterChange);
+  
+  // Name search filter
+  elements.nameSearchInput.addEventListener('input', handleNameSearchInput);
+  
+  // Status filter
+  elements.statusFilter.addEventListener('change', handleStatusFilterChange);
+  
+  // DoNotCall filter
+  elements.doNotCallFilter.addEventListener('change', handleDoNotCallFilterChange);
   
   elements.settingsBtn.addEventListener('click', openSettings);
   elements.closeSettings.addEventListener('click', closeSettingsModal);
@@ -443,7 +464,9 @@ async function handleSync(): Promise<void> {
       
       // Extract unique lists and populate filter
       extractUniqueLists(state.leads);
+      extractUniqueStatuses(state.leads);
       populateListFilter();
+      populateStatusFilter();
       
       updateLeadUI();
       
@@ -515,6 +538,44 @@ function extractUniqueLists(leads: EnrichedLead[]): void {
     }
   });
   state.uniqueLists = Array.from(lists).sort();
+}
+
+/**
+ * Extract unique status values from leads
+ */
+function extractUniqueStatuses(leads: EnrichedLead[]): void {
+  const statuses = new Set<string>();
+  leads.forEach(lead => {
+    if (lead.Status) {
+      statuses.add(lead.Status);
+    }
+  });
+  state.uniqueStatuses = Array.from(statuses).sort();
+}
+
+/**
+ * Populate the status filter dropdown
+ */
+function populateStatusFilter(): void {
+  const select = elements.statusFilter;
+  // Clear existing options except "All Statuses"
+  select.innerHTML = '<option value="all">All Statuses</option>';
+  
+  // Add unique statuses
+  state.uniqueStatuses.forEach(status => {
+    const option = document.createElement('option');
+    option.value = status;
+    option.textContent = status;
+    select.appendChild(option);
+  });
+  
+  // Restore selected status if it still exists
+  if (state.selectedStatusFilter !== 'all' && state.uniqueStatuses.includes(state.selectedStatusFilter)) {
+    select.value = state.selectedStatusFilter;
+  } else {
+    select.value = 'all';
+    state.selectedStatusFilter = 'all';
+  }
 }
 
 /**
@@ -610,7 +671,7 @@ function updateListFilterDropdown(): void {
 /**
  * Get filtered leads based on current filter settings
  * Returns leads sorted alphabetically by last name, then first name
- * Filters by both Lead_List_Name__c and SGA_Self_List_name__c
+ * Filters by: list name, status, DoNotCall, unsent status, and name search
  */
 function getFilteredLeads(): EnrichedLead[] {
   let filtered = [...state.leads];
@@ -623,9 +684,33 @@ function getFilteredLeads(): EnrichedLead[] {
     );
   }
   
+  // Filter by status
+  if (state.selectedStatusFilter !== 'all') {
+    filtered = filtered.filter(lead => lead.Status === state.selectedStatusFilter);
+  }
+  
+  // Filter by DoNotCall (exclude if checkbox is checked)
+  if (elements.doNotCallFilter.checked) {
+    filtered = filtered.filter(lead => !lead.DoNotCall);
+  }
+  
   // Filter by unsent status
   if (elements.unsentFilter.checked) {
     filtered = filtered.filter(lead => !lead.Prospecting_Step_LinkedIn__c);
+  }
+  
+  // Filter by name search (fuzzy match on first or last name)
+  if (state.nameSearchQuery.trim()) {
+    const query = state.nameSearchQuery.trim().toLowerCase();
+    filtered = filtered.filter(lead => {
+      const firstName = (lead.FirstName || '').toLowerCase();
+      const lastName = (lead.LastName || '').toLowerCase();
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      return fuzzyMatch(query, firstName) || 
+             fuzzyMatch(query, lastName) || 
+             fuzzyMatch(query, fullName);
+    });
   }
   
   // Ensure filtered results are sorted (in case filtering changed order)
@@ -679,6 +764,32 @@ function handleListFilterInput(): void {
  * Handle unsent filter change
  */
 function handleUnsentFilterChange(): void {
+  state.currentIndex = 0;
+  updateLeadUI();
+}
+
+/**
+ * Handle name search input
+ */
+function handleNameSearchInput(): void {
+  state.nameSearchQuery = elements.nameSearchInput.value;
+  state.currentIndex = 0;
+  updateLeadUI();
+}
+
+/**
+ * Handle status filter change
+ */
+function handleStatusFilterChange(): void {
+  state.selectedStatusFilter = elements.statusFilter.value;
+  state.currentIndex = 0;
+  updateLeadUI();
+}
+
+/**
+ * Handle DoNotCall filter change
+ */
+function handleDoNotCallFilterChange(): void {
   state.currentIndex = 0;
   updateLeadUI();
 }
@@ -753,6 +864,17 @@ function displayLead(lead: EnrichedLead): void {
     elements.linkedinLink.classList.remove('hidden');
   } else {
     elements.linkedinLink.classList.add('hidden');
+  }
+  
+  // Salesforce link
+  const salesforceUrl = getSalesforceUrl(lead.Id);
+  if (elements.salesforceLink) {
+    if (salesforceUrl) {
+      elements.salesforceLink.href = salesforceUrl;
+      elements.salesforceLink.classList.remove('hidden');
+    } else {
+      elements.salesforceLink.classList.add('hidden');
+    }
   }
   
   // Already sent badge

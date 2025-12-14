@@ -4,6 +4,57 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
+// Salesforce URL Constants & Helpers
+// -----------------------------------------------------------------------------
+
+/** Salesforce Lightning base URL for Savvy Wealth org */
+export const SALESFORCE_BASE_URL = 'https://savvywealth.lightning.force.com/lightning/r';
+
+/** Salesforce object types with their ID prefixes */
+export const SALESFORCE_OBJECT_PREFIXES = {
+  LEAD: '00Q',
+  OPPORTUNITY: '006',
+  CONTACT: '003',
+  ACCOUNT: '001',
+} as const;
+
+/** 
+ * Determines the Salesforce object type from an ID prefix
+ * @param id - The 18-character Salesforce record ID
+ * @returns The object type name (Lead, Opportunity, Contact, Account) or 'Unknown'
+ */
+export function getSalesforceObjectType(id: string): string {
+  if (!id || id.length < 3) return 'Unknown';
+  const prefix = id.substring(0, 3);
+  
+  switch (prefix) {
+    case SALESFORCE_OBJECT_PREFIXES.LEAD:
+      return 'Lead';
+    case SALESFORCE_OBJECT_PREFIXES.OPPORTUNITY:
+      return 'Opportunity';
+    case SALESFORCE_OBJECT_PREFIXES.CONTACT:
+      return 'Contact';
+    case SALESFORCE_OBJECT_PREFIXES.ACCOUNT:
+      return 'Account';
+    default:
+      return 'Unknown';
+  }
+}
+
+/**
+ * Generates a Salesforce Lightning URL for a Lead record
+ * @param id - The 18-character Salesforce Lead record ID (00Q prefix)
+ * @returns The full Salesforce Lightning URL or null if ID is invalid
+ * 
+ * Note: Our n8n workflow only returns Lead records, so all URLs are Lead URLs.
+ */
+export function getSalesforceUrl(id: string): string | null {
+  if (!id || id.length < 15) return null;
+  // All records are Leads in our workflow
+  return `${SALESFORCE_BASE_URL}/Lead/${id}/view`;
+}
+
+// -----------------------------------------------------------------------------
 // Salesforce Lead Record (EXACT FIELD NAMES)
 // -----------------------------------------------------------------------------
 export interface SalesforceLead {
@@ -30,6 +81,9 @@ export interface SalesforceLead {
   
   /** Lead status: 'New', 'Contacting', 'Replied', 'Closed', etc. */
   Status: string;
+  
+  /** TRUE if Do Not Call is set */
+  DoNotCall: boolean;
   
   /** TRUE if LinkedIn message already sent */
   Prospecting_Step_LinkedIn__c: boolean;
