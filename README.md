@@ -42,7 +42,7 @@ Get up and running in 5 steps:
 1. **Prerequisites**: Ensure you're signed into Chrome with an `@savvywealth.com` email
 2. **Build**: Run `npm install && npm run build` in the project directory
 3. **Load Extension**: Open `chrome://extensions/`, enable Developer mode, click "Load unpacked", select the `dist/` folder
-4. **Configure Webhooks**: Open extension settings (⚙️), enter your n8n and Zapier webhook URLs
+4. **Configure Webhooks**: Open extension settings (⚙️), enter your n8n webhook URLs (for fetching leads and logging activities)
 5. **Sync Leads**: Click "Sync from Salesforce" to load your assigned leads
 
 > **Important**: See [Installation](#-installation) and [Configuration](#-configuration) sections for detailed setup instructions.
@@ -218,9 +218,9 @@ Accelerate your workflow with keyboard shortcuts:
     ↓
     [SGA clicks "✓ Sent" button]
     ↓
-11. Extension sends POST to Zapier webhook
+11. Extension sends POST to n8n logging webhook
     ↓
-    [Zapier updates Salesforce: Prospecting_Step_LinkedIn__c = true]
+    [n8n updates Salesforce: Prospecting_Step_LinkedIn__c = true]
     ↓
 12. Lead marked as sent in extension UI
     ↓
@@ -275,7 +275,7 @@ All activities are logged directly in Salesforce, providing:
 - **Google Chrome** browser (latest version recommended)
 - **Chrome profile** signed in with `@savvywealth.com` email address
 - **n8n workflows** configured (see [n8n Setup](#n8n-webhook-setup))
-- **Zapier webhook** configured (see [Zapier Setup](#zapier-webhook-setup))
+- **n8n logging webhook** configured (see [n8n Logging Setup](#n8n-logging-webhook-setup))
 - **Salesforce leads** assigned to your user account
 - **Node.js** (v16 or higher) and npm (for building from source)
 
@@ -310,7 +310,7 @@ npm run build
    - Click the settings icon (⚙️) in the extension footer
    - Enter your webhook URLs:
      - **Lead List Workflow URL**: Your n8n webhook URL for fetching leads
-     - **Message Sent Logging URL**: Your Zapier webhook URL for logging activities
+     - **Message Sent Logging URL**: Your n8n logging webhook URL for logging activities
    - Click **"Test Connection"** for each webhook to verify
    - Click **"Save Settings"**
 
@@ -338,7 +338,7 @@ Access settings via the ⚙️ icon in the extension footer.
 | Setting | Description | Required |
 |---------|-------------|----------|
 | **Lead List Workflow URL** | n8n webhook URL for fetching leads from Salesforce | Yes |
-| **Message Sent Logging URL** | Zapier webhook URL for logging activities to Salesforce | Yes |
+| **Message Sent Logging URL** | n8n logging webhook URL for logging activities to Salesforce | Yes |
 | **Auto-advance after marking sent** | Automatically move to next lead after marking current as sent | No |
 
 ### n8n Webhook Setup
@@ -384,9 +384,9 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 ]
 ```
 
-### Zapier Webhook Setup
+### n8n Logging Webhook Setup
 
-The Zapier webhook handles **WRITING** activity logs to Salesforce.
+The n8n logging webhook handles **WRITING** activity logs to Salesforce.
 
 **Required Configuration:**
 - **HTTP Method**: `POST`
@@ -394,17 +394,17 @@ The Zapier webhook handles **WRITING** activity logs to Salesforce.
 - **Action**: Update Salesforce Lead record
 
 **Detailed Setup Instructions:**
-See [`documentation/WEBHOOK_SETUP_GUIDE.md`](documentation/WEBHOOK_SETUP_GUIDE.md) for complete Zapier webhook configuration.
+See [`documentation/N8N_COMPLETE_SETUP.md`](documentation/N8N_COMPLETE_SETUP.md) for complete n8n workflow configuration.
 
-**Zapier Workflow Steps:**
-1. **Webhooks by Zapier** - Catch Hook (receives POST request)
+**n8n Workflow Steps:**
+1. **Webhook** - Receives POST request with activity data
 2. **Salesforce** - Update Lead
    - Set `Prospecting_Step_LinkedIn__c = true`
    - Filter by Lead `Id`
 
-**Example Zapier Webhook Request:**
+**Example n8n Logging Webhook Request:**
 ```json
-POST https://hooks.zapier.com/hooks/catch/1234567/abcdefg/
+POST https://your-n8n-instance.com/webhook/log-activity
 
 {
   "leadId": "00Qxx000000xxxxx",
@@ -414,7 +414,7 @@ POST https://hooks.zapier.com/hooks/catch/1234567/abcdefg/
 }
 ```
 
-**Example Zapier Webhook Response:**
+**Example n8n Logging Webhook Response:**
 ```json
 {
   "success": true,
@@ -422,7 +422,7 @@ POST https://hooks.zapier.com/hooks/catch/1234567/abcdefg/
 }
 ```
 
-> **Important**: The hybrid architecture (n8n for reads, Zapier for writes) is designed for team familiarity with Zapier and n8n's superior JSON array handling capabilities.
+> **Important**: Both reading and writing operations use n8n workflows for consistency and superior JSON array handling capabilities.
 
 ---
 
@@ -520,7 +520,7 @@ graph TB
     D -->|User Clicks Open LinkedIn| E[LinkedIn Profile]
     E -->|Content Script Scrapes| F[MutationObserver]
     F -->|Profile Data| A
-    A -->|User Clicks Sent| G[Zapier Webhook]
+    A -->|User Clicks Sent| G[n8n Logging Webhook]
     G -->|Update Lead| C
     C -->|Prospecting_Step_LinkedIn__c = true| G
     G -->|Success Response| A
@@ -528,10 +528,11 @@ graph TB
 
 ### Architecture Overview
 
-**Hybrid Backend Architecture:**
-- **n8n**: Handles READING Salesforce data (returns JSON arrays)
-- **Zapier**: Handles WRITING activity logs (team familiarity)
-- **Rationale**: n8n's superior JSON array handling + Zapier's team familiarity
+**Backend Architecture:**
+- **n8n**: Handles both READING and WRITING Salesforce data
+- **Reading**: Fetches leads via GET webhook (returns JSON arrays)
+- **Writing**: Logs activities via POST webhook (updates Salesforce records)
+- **Rationale**: Consistent n8n-based architecture with superior JSON array handling
 
 **Frontend:**
 - **Chrome Extension (Manifest V3)**: Side panel UI, content scripts, service worker
@@ -572,7 +573,7 @@ graph TB
 - Email domain validation (`@savvywealth.com` required)
 
 **API Security:**
-- All API calls go through n8n/Zapier with email validation
+- All API calls go through n8n workflows with email validation
 - Salesforce security enforced at database level (SOQL filtering)
 - No sensitive data stored in extension (leads cached locally only)
 
@@ -669,19 +670,19 @@ The extension receives the complete array after all pages are fetched, so no cli
 
 | Issue | Solution |
 |-------|----------|
-| Zapier webhook URL not configured | Go to Settings (⚙️) and enter your Zapier webhook URL |
-| Zapier workflow not active | Check Zapier workflow is active and webhook is enabled |
+| n8n logging webhook URL not configured | Go to Settings (⚙️) and enter your n8n logging webhook URL |
+| n8n workflow not active | Check n8n workflow is active and webhook is enabled |
 | Network error | Check browser console (F12) for network errors |
-| Salesforce update failed | Check Zapier task history for errors |
+| Salesforce update failed | Check n8n workflow execution history for errors |
 
 **Debug Steps:**
-1. Verify Zapier webhook URL in Settings
-2. Test Zapier connection using "Test Connection" button
+1. Verify n8n logging webhook URL in Settings
+2. Test n8n logging connection using "Test Connection" button
 3. Check browser console (F12) for network errors
-4. Check Zapier task history for failed updates
+4. Check n8n workflow execution history for failed updates
 5. Verify Salesforce Lead `Id` is correct
 
-### n8n/Zapier Connection Errors
+### n8n Connection Errors
 
 **Common Error Messages:**
 
@@ -689,12 +690,12 @@ The extension receives the complete array after all pages are fetched, so no cli
 |-------|-------|----------|
 | `n8n returned 404` | Webhook URL incorrect or workflow not active | Verify webhook URL and ensure workflow is active |
 | `n8n returned 500` | n8n workflow error | Check n8n workflow execution logs |
-| `Zapier returned 400` | Invalid payload format | Check Zapier webhook expects correct JSON structure |
+| `n8n returned 400` | Invalid payload format | Check n8n webhook expects correct JSON structure |
 | `Connection failed` | Network issue or webhook down | Verify webhook URLs are accessible |
 
 **Debug Steps:**
 1. Test webhook URLs directly in browser/Postman
-2. Check n8n/Zapier workflow execution history
+2. Check n8n workflow execution history
 3. Verify webhook authentication (if configured)
 4. Check network connectivity
 
@@ -722,7 +723,7 @@ velocity-sidebar/
 │   ├── content/
 │   │   └── linkedin-scraper.ts  # DOM scraping with MutationObserver
 │   ├── lib/
-│   │   ├── api.ts               # n8n + Zapier API integration
+│   │   ├── api.ts               # n8n API integration (read & write)
 │   │   ├── auth.ts              # chrome.identity.getProfileUserInfo
 │   │   ├── storage.ts           # Chrome storage wrapper
 │   │   └── templates.ts         # Message template processing
@@ -790,7 +791,7 @@ npm run clean
 1. Open browser DevTools (F12)
 2. Go to Network tab
 3. Filter by "Fetch/XHR"
-4. Look for n8n/Zapier webhook requests
+4. Look for n8n webhook requests
 
 ### Testing Checklist
 
@@ -848,9 +849,9 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 }
 ```
 
-### Zapier Webhook (POST) - Log Activity
+### n8n Logging Webhook (POST) - Log Activity
 
-**Endpoint:** `POST {zapier-webhook-url}`
+**Endpoint:** `POST {n8n-logging-webhook-url}`
 
 **Request:**
 ```json
@@ -904,7 +905,7 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 
 - **No External Tracking**: Extension does not send data to analytics services
 - **Local Storage Only**: Leads cached locally, not sent to external servers
-- **Secure API Calls**: All API calls go through n8n/Zapier with email validation
+- **Secure API Calls**: All API calls go through n8n workflows with email validation
 - **Chrome Sync**: Only user templates sync across devices (via Chrome's secure sync)
 
 ### Security
@@ -954,7 +955,7 @@ Additional documentation is available in the `documentation/` folder:
 | [`N8N_COMPLETE_SETUP.md`](documentation/N8N_COMPLETE_SETUP.md) | Complete n8n workflow setup guide |
 | [`N8N_WORKFLOW_CODE_COMPLETE.md`](documentation/N8N_WORKFLOW_CODE_COMPLETE.md) | Full n8n node code examples |
 | [`N8N_SALESFORCE_NODE_CONFIG.md`](documentation/N8N_SALESFORCE_NODE_CONFIG.md) | Salesforce node configuration details |
-| [`WEBHOOK_SETUP_GUIDE.md`](documentation/WEBHOOK_SETUP_GUIDE.md) | n8n and Zapier webhook setup guide |
+| [`WEBHOOK_SETUP_GUIDE.md`](documentation/WEBHOOK_SETUP_GUIDE.md) | n8n webhook setup guide |
 | [`SECURITY_LEAD_FILTERING.md`](documentation/SECURITY_LEAD_FILTERING.md) | Security and lead filtering details |
 | [`custom_template_update.md`](documentation/custom_template_update.md) | Template management implementation |
 | [`TESTING_CHECKLIST.md`](documentation/TESTING_CHECKLIST.md) | Complete testing procedures |
