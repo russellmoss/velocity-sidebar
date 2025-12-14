@@ -36,6 +36,9 @@ export interface SalesforceLead {
   
   /** Lead list name (custom field) */
   Lead_List_Name__c: string | null;
+  
+  /** SGA self-assigned list name (custom field) */
+  SGA_Self_List_name__c: string | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -125,15 +128,25 @@ export interface AuthState {
 }
 
 // -----------------------------------------------------------------------------
-// Message Template Types
+// Message Template Types (Updated for User-Specific Templates)
 // -----------------------------------------------------------------------------
 export interface MessageTemplate {
   id: string;
   name: string;
   content: string;
-  category: 'intro' | 'followup' | 'reconnect';
-  isDefault?: boolean;
+  category: 'intro' | 'followup' | 'reconnect' | 'custom';
+  isDefault?: boolean;        // True for system defaults (read-only source)
+  isUserCreated?: boolean;    // True for user-created templates
+  createdBy?: string;         // User's email who created it
+  createdAt?: number;         // Timestamp (ms since epoch)
+  updatedAt?: number;         // Timestamp (ms since epoch)
 }
+
+// Template creation payload (without auto-generated fields)
+export type CreateTemplatePayload = Pick<MessageTemplate, 'name' | 'content' | 'category'>;
+
+// Template update payload (partial updates allowed)
+export type UpdateTemplatePayload = Partial<Pick<MessageTemplate, 'name' | 'content' | 'category'>>;
 
 export interface TemplateVariables {
   firstName: string;
@@ -171,7 +184,8 @@ export interface ProfileScrapedMessage extends ChromeMessage {
 // -----------------------------------------------------------------------------
 export const STORAGE_KEYS = {
   LEADS_CACHE: 'leads_cache',
-  TEMPLATES: 'templates',
+  TEMPLATES: 'user_templates',           // User's custom templates (sync storage)
+  DELETED_DEFAULTS: 'deleted_defaults',  // IDs of default templates user has deleted
   SETTINGS: 'settings',
   LAST_SYNC: 'last_sync',
   USER_EMAIL: 'user_email',

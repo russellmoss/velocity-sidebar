@@ -85,11 +85,37 @@ export async function fetchLeads(email: string): Promise<FetchLeadsResponse> {
     };
   }
 
+  // SECURITY: Validate email format and domain before sending
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    console.error('[API] Invalid email format:', email);
+    return {
+      success: false,
+      leads: [],
+      count: 0,
+      error: 'Invalid email format.',
+    };
+  }
+
+  // SECURITY: Only allow @savvywealth.com emails
+  if (!email.toLowerCase().endsWith('@savvywealth.com')) {
+    console.error('[API] Email domain not allowed:', email);
+    return {
+      success: false,
+      leads: [],
+      count: 0,
+      error: 'Only @savvywealth.com emails are allowed.',
+    };
+  }
+
+  // SECURITY: Sanitize email (trim, lowercase) before sending
+  const sanitizedEmail = email.trim().toLowerCase();
+
   try {
     const url = new URL(config.n8nWebhookUrl);
-    url.searchParams.set('email', email);
+    url.searchParams.set('email', sanitizedEmail);
 
-    console.log('[API] Fetching leads from n8n for:', email);
+    console.log('[API] Fetching leads from n8n for:', sanitizedEmail);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

@@ -14,7 +14,24 @@ import type {
 import { DEFAULT_TEMPLATES } from '../types';
 import { fetchLeads, logActivity, initApiConfig, setApiConfig, testN8nConnection, testN8nLoggingConnection } from '../lib/api';
 import { authenticateUser, getAuthState, isAuthenticatedWithValidDomain } from '../lib/auth';
-import { getCachedLeads, setCachedLeads, markLeadAsSent, getTemplates, getSettings, setSettings, getLastSyncTime } from '../lib/storage';
+import { 
+  getCachedLeads, 
+  setCachedLeads, 
+  markLeadAsSent, 
+  getUserTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  getDeletedDefaultIds,
+  restoreDefaultTemplate,
+  resetTemplatesToDefaults,
+  getTemplateById,
+  duplicateTemplate,
+  getSettings, 
+  setSettings, 
+  getLastSyncTime 
+} from '../lib/storage';
+import type { CreateTemplatePayload, UpdateTemplatePayload } from '../types';
 import { generateMessage, getMissingVariables } from '../lib/templates';
 
 // -----------------------------------------------------------------------------
@@ -100,6 +117,32 @@ const elements = {
   listFilterToggle: document.getElementById('list-filter-toggle') as HTMLButtonElement,
   unsentFilter: document.getElementById('unsent-filter') as HTMLInputElement,
   
+  // Template Manager Elements
+  templateModal: document.getElementById('template-modal') as HTMLDivElement,
+  templateModalTitle: document.getElementById('template-modal-title') as HTMLHeadingElement,
+  closeTemplateModalBtn: document.getElementById('close-template-modal') as HTMLButtonElement,
+  templateListView: document.getElementById('template-list-view') as HTMLDivElement,
+  templateEditorView: document.getElementById('template-editor-view') as HTMLDivElement,
+  templateList: document.getElementById('template-list') as HTMLDivElement,
+  newTemplateBtn: document.getElementById('new-template-btn') as HTMLButtonElement,
+  manageTemplatesBtn: document.getElementById('manage-templates-btn') as HTMLButtonElement,
+  templateForm: document.getElementById('template-form') as HTMLFormElement,
+  editTemplateId: document.getElementById('edit-template-id') as HTMLInputElement,
+  editTemplateName: document.getElementById('edit-template-name') as HTMLInputElement,
+  editTemplateCategory: document.getElementById('edit-template-category') as HTMLSelectElement,
+  editTemplateContent: document.getElementById('edit-template-content') as HTMLTextAreaElement,
+  contentCharCount: document.getElementById('content-char-count') as HTMLSpanElement,
+  cancelTemplateBtn: document.getElementById('cancel-template-btn') as HTMLButtonElement,
+  saveTemplateBtn: document.getElementById('save-template-btn') as HTMLButtonElement,
+  restoreDefaultsSection: document.getElementById('restore-defaults-section') as HTMLDivElement,
+  deletedCount: document.getElementById('deleted-count') as HTMLSpanElement,
+  restoreAllDefaultsBtn: document.getElementById('restore-all-defaults-btn') as HTMLButtonElement,
+  // Delete Confirmation Modal
+  deleteConfirmModal: document.getElementById('delete-confirm-modal') as HTMLDivElement,
+  deleteTemplateName: document.getElementById('delete-template-name') as HTMLParagraphElement,
+  cancelDeleteBtn: document.getElementById('cancel-delete-btn') as HTMLButtonElement,
+  confirmDeleteBtn: document.getElementById('confirm-delete-btn') as HTMLButtonElement,
+  
   toastContainer: document.getElementById('toast-container') as HTMLDivElement,
 };
 
@@ -113,9 +156,9 @@ async function init(): Promise<void> {
   // 1. Initialize API config
   await initApiConfig();
   
-  // 2. Load templates
-  state.templates = await getTemplates();
-  populateTemplateSelect();
+  // 2. Load templates (now uses user-specific storage)
+  state.templates = await getUserTemplates();
+  await populateTemplateSelect();
   
   // 3. AUTHENTICATE using getProfileUserInfo
   console.log('[Main] Getting Chrome profile info...');
@@ -254,6 +297,78 @@ function setupEventListeners(): void {
   elements.settingsBtn.addEventListener('click', openSettings);
   elements.closeSettings.addEventListener('click', closeSettingsModal);
   elements.saveSettingsBtn.addEventListener('click', handleSaveSettings);
+  
+  // Template Manager Event Listeners
+  elements.manageTemplatesBtn?.addEventListener('click', openTemplateModal);
+  elements.closeTemplateModalBtn?.addEventListener('click', closeTemplateModal);
+  elements.newTemplateBtn?.addEventListener('click', () => showTemplateEditor());
+  elements.cancelTemplateBtn?.addEventListener('click', showTemplateList);
+  elements.templateForm?.addEventListener('submit', handleTemplateSubmit);
+  elements.editTemplateContent?.addEventListener('input', updateContentCharCount);
+  elements.restoreAllDefaultsBtn?.addEventListener('click', handleRestoreAllDefaults);
+  
+  // Event delegation for template action buttons (edit, duplicate, delete)
+  elements.templateList?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const button = target.closest('.template-action-btn') as HTMLButtonElement;
+    if (!button) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const action = button.dataset.action;
+    const templateId = button.dataset.templateId;
+    const templateName = button.dataset.templateName;
+    
+    console.log('[Template Manager] Button clicked:', { action, templateId, templateName });
+    
+    if (!templateId) {
+      console.warn('[Template Manager] No template ID found');
+      return;
+    }
+    
+    switch (action) {
+      case 'edit':
+        console.log('[Template Manager] Edit action triggered');
+        handleEditTemplate(templateId);
+        break;
+      case 'duplicate':
+        console.log('[Template Manager] Duplicate action triggered');
+        handleDuplicateTemplate(templateId);
+        break;
+      case 'delete':
+        if (templateName) {
+          console.log('[Template Manager] Delete action triggered');
+          handleDeleteTemplate(templateId, templateName);
+        }
+        break;
+      default:
+        console.warn('[Template Manager] Unknown action:', action);
+    }
+  });
+  
+  // Delete confirmation modal
+  elements.cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
+  elements.confirmDeleteBtn?.addEventListener('click', confirmDeleteTemplate);
+  
+  // Close modals on backdrop click
+  elements.templateModal?.addEventListener('click', (e) => {
+    if (e.target === elements.templateModal) closeTemplateModal();
+  });
+  elements.deleteConfirmModal?.addEventListener('click', (e) => {
+    if (e.target === elements.deleteConfirmModal) closeDeleteModal();
+  });
+  
+  // Close modals on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!elements.deleteConfirmModal.classList.contains('hidden')) {
+        closeDeleteModal();
+      } else if (!elements.templateModal.classList.contains('hidden')) {
+        closeTemplateModal();
+      }
+    }
+  });
   elements.testN8nBtn.addEventListener('click', handleTestN8n);
   elements.testN8nLoggingBtn.addEventListener('click', handleTestN8nLogging);
   
@@ -385,12 +500,18 @@ function sortLeadsByLastName(leads: EnrichedLead[]): EnrichedLead[] {
 
 /**
  * Extract unique list names from leads
+ * Includes both Lead_List_Name__c and SGA_Self_List_name__c
  */
 function extractUniqueLists(leads: EnrichedLead[]): void {
   const lists = new Set<string>();
   leads.forEach(lead => {
+    // Add Lead_List_Name__c if present
     if (lead.Lead_List_Name__c) {
       lists.add(lead.Lead_List_Name__c);
+    }
+    // Add SGA_Self_List_name__c if present
+    if (lead.SGA_Self_List_name__c) {
+      lists.add(lead.SGA_Self_List_name__c);
     }
   });
   state.uniqueLists = Array.from(lists).sort();
@@ -489,13 +610,17 @@ function updateListFilterDropdown(): void {
 /**
  * Get filtered leads based on current filter settings
  * Returns leads sorted alphabetically by last name, then first name
+ * Filters by both Lead_List_Name__c and SGA_Self_List_name__c
  */
 function getFilteredLeads(): EnrichedLead[] {
   let filtered = [...state.leads];
   
-  // Filter by list name
+  // Filter by list name (checks both Lead_List_Name__c and SGA_Self_List_name__c)
   if (state.selectedListFilter !== 'all') {
-    filtered = filtered.filter(lead => lead.Lead_List_Name__c === state.selectedListFilter);
+    filtered = filtered.filter(lead => 
+      lead.Lead_List_Name__c === state.selectedListFilter ||
+      lead.SGA_Self_List_name__c === state.selectedListFilter
+    );
   }
   
   // Filter by unsent status
@@ -691,15 +816,52 @@ function handleProfileUpdate(profile: LinkedInProfile): void {
 // Template & Message Handling
 // -----------------------------------------------------------------------------
 
-function populateTemplateSelect(): void {
+async function populateTemplateSelect(): Promise<void> {
+  // Fetch latest templates (includes user's custom + active defaults)
+  state.templates = await getUserTemplates();
+  
   elements.templateSelect.innerHTML = '<option value="">Select a template...</option>';
+  
+  // Group templates by category
+  const categories: Record<string, MessageTemplate[]> = {
+    intro: [],
+    followup: [],
+    reconnect: [],
+    custom: [],
+  };
+  
   state.templates.forEach(t => {
-    const option = document.createElement('option');
-    option.value = t.id;
-    option.textContent = t.name;
-    if (t.isDefault) option.selected = true;
-    elements.templateSelect.appendChild(option);
+    if (categories[t.category]) {
+      categories[t.category].push(t);
+    } else {
+      categories.custom.push(t);
+    }
   });
+  
+  // Add optgroups for each category with templates
+  const categoryLabels: Record<string, string> = {
+    intro: '📨 Introduction',
+    followup: '🔄 Follow-up',
+    reconnect: '🔗 Reconnect',
+    custom: '⭐ Custom',
+  };
+  
+  for (const [cat, templates] of Object.entries(categories)) {
+    if (templates.length === 0) continue;
+    
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = categoryLabels[cat] || cat;
+    
+    templates.forEach(t => {
+      const option = document.createElement('option');
+      option.value = t.id;
+      option.textContent = t.isUserCreated ? `${t.name} ★` : t.name;
+      if (t.isDefault) option.selected = true;
+      optgroup.appendChild(option);
+    });
+    
+    elements.templateSelect.appendChild(optgroup);
+  }
 }
 
 function handleTemplateChange(): void {
@@ -795,6 +957,299 @@ async function handleMarkSent(): Promise<void> {
     elements.markSentBtn.textContent = '✓ Sent';
   }
 }
+
+// =============================================================================
+// TEMPLATE MANAGER
+// =============================================================================
+
+let templateToDelete: string | null = null;
+
+/**
+ * Open the template manager modal
+ */
+function openTemplateModal(): void {
+  elements.templateModal.classList.remove('hidden');
+  showTemplateList();
+}
+
+/**
+ * Close the template manager modal
+ */
+function closeTemplateModal(): void {
+  elements.templateModal.classList.add('hidden');
+  templateToDelete = null;
+}
+
+/**
+ * Show the template list view
+ */
+async function showTemplateList(): Promise<void> {
+  elements.templateListView.classList.remove('hidden');
+  elements.templateEditorView.classList.add('hidden');
+  elements.templateModalTitle.textContent = 'Manage Templates';
+  
+  const templates = await getUserTemplates();
+  const deletedDefaults = await getDeletedDefaultIds();
+  
+  // Update restore defaults section visibility
+  if (deletedDefaults.length > 0) {
+    elements.restoreDefaultsSection.classList.remove('hidden');
+    elements.deletedCount.textContent = `${deletedDefaults.length} template${deletedDefaults.length > 1 ? 's' : ''} hidden`;
+  } else {
+    elements.restoreDefaultsSection.classList.add('hidden');
+  }
+  
+  // Render template list
+  if (templates.length === 0) {
+    elements.templateList.innerHTML = `
+      <div class="text-center py-8 text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p>No templates found</p>
+        <p class="text-xs mt-1">Click "New Template" to create one</p>
+      </div>
+    `;
+    return;
+  }
+  
+  elements.templateList.innerHTML = templates.map(t => {
+    const categoryColors: Record<string, string> = {
+      intro: 'bg-blue-100 text-blue-700',
+      followup: 'bg-purple-100 text-purple-700',
+      reconnect: 'bg-amber-100 text-amber-700',
+      custom: 'bg-gray-100 text-gray-700',
+    };
+    
+    const categoryBadge = categoryColors[t.category] || categoryColors.custom;
+    const truncatedContent = t.content.length > 80 ? t.content.substring(0, 80) + '...' : t.content;
+    
+    return `
+      <div class="group flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors ${t.isDefault ? 'border-l-4 border-l-savvy-green' : ''}" data-template-id="${t.id}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-medium text-sm text-gray-800 truncate">${escapeHtml(t.name)}</span>
+            <span class="text-xs px-1.5 py-0.5 rounded ${categoryBadge}">${t.category}</span>
+            ${t.isDefault ? '<span class="text-xs bg-savvy-green/10 text-savvy-green px-1.5 py-0.5 rounded">Default</span>' : ''}
+            ${t.isUserCreated ? '<span class="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">Custom</span>' : ''}
+          </div>
+          <p class="text-xs text-gray-500 mt-1 line-clamp-2">${escapeHtml(truncatedContent)}</p>
+        </div>
+        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <button 
+            data-action="edit"
+            data-template-id="${t.id}"
+            class="p-1.5 hover:bg-gray-200 rounded transition-colors template-action-btn" 
+            title="Edit"
+          >
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </button>
+          <button 
+            data-action="duplicate"
+            data-template-id="${t.id}"
+            class="p-1.5 hover:bg-gray-200 rounded transition-colors template-action-btn" 
+            title="Duplicate"
+          >
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+          </button>
+          <button 
+            data-action="delete"
+            data-template-id="${t.id}"
+            data-template-name="${escapeHtml(t.name)}"
+            class="p-1.5 hover:bg-red-100 rounded transition-colors template-action-btn" 
+            title="Delete"
+          >
+            <svg class="w-4 h-4 text-gray-500 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Show the template editor view
+ */
+async function showTemplateEditor(templateId?: string): Promise<void> {
+  console.log('[Template Manager] showTemplateEditor called with ID:', templateId);
+  elements.templateListView.classList.add('hidden');
+  elements.templateEditorView.classList.remove('hidden');
+  
+  // Reset form
+  elements.templateForm.reset();
+  elements.editTemplateId.value = '';
+  updateContentCharCount();
+  
+  if (templateId) {
+    // Edit existing template
+    console.log('[Template Manager] Loading template for edit:', templateId);
+    const template = await getTemplateById(templateId);
+    console.log('[Template Manager] Template loaded:', template);
+    if (template) {
+      elements.templateModalTitle.textContent = 'Edit Template';
+      elements.editTemplateId.value = template.id;
+      elements.editTemplateName.value = template.name;
+      elements.editTemplateCategory.value = template.category;
+      elements.editTemplateContent.value = template.content;
+      updateContentCharCount();
+      console.log('[Template Manager] Form populated with template data');
+    } else {
+      console.error('[Template Manager] Template not found:', templateId);
+      showToast('Template not found', 'error');
+      showTemplateList();
+    }
+  } else {
+    // New template
+    elements.templateModalTitle.textContent = 'New Template';
+    elements.editTemplateCategory.value = 'custom';
+  }
+}
+
+/**
+ * Update character count for content textarea
+ */
+function updateContentCharCount(): void {
+  const count = elements.editTemplateContent.value.length;
+  elements.contentCharCount.textContent = `${count}/2000`;
+  elements.contentCharCount.classList.toggle('text-amber-600', count > 1500);
+  elements.contentCharCount.classList.toggle('text-red-600', count > 1900);
+}
+
+/**
+ * Handle template form submission
+ */
+async function handleTemplateSubmit(e: Event): Promise<void> {
+  e.preventDefault();
+  
+  const name = elements.editTemplateName.value.trim();
+  const category = elements.editTemplateCategory.value as MessageTemplate['category'];
+  const content = elements.editTemplateContent.value.trim();
+  const templateId = elements.editTemplateId.value;
+  
+  if (!name || !content) {
+    showToast('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  try {
+    elements.saveTemplateBtn.disabled = true;
+    elements.saveTemplateBtn.textContent = 'Saving...';
+    
+    if (templateId) {
+      // Update existing
+      await updateTemplate(templateId, { name, category, content }, state.authState.email!);
+      showToast('Template updated!', 'success');
+    } else {
+      // Create new
+      await createTemplate({ name, category, content }, state.authState.email!);
+      showToast('Template created!', 'success');
+    }
+    
+    // Refresh templates in state and dropdown
+    await populateTemplateSelect();
+    showTemplateList();
+    
+  } catch (err) {
+    console.error('[Main] Template save error:', err);
+    showToast('Failed to save template', 'error');
+  } finally {
+    elements.saveTemplateBtn.disabled = false;
+    elements.saveTemplateBtn.textContent = 'Save Template';
+  }
+}
+
+/**
+ * Handle template deletion with confirmation
+ */
+function handleDeleteTemplate(templateId: string, templateName: string): void {
+  templateToDelete = templateId;
+  elements.deleteTemplateName.textContent = `Delete "${templateName}"? This action cannot be undone.`;
+  elements.deleteConfirmModal.classList.remove('hidden');
+}
+
+/**
+ * Confirm and execute template deletion
+ */
+async function confirmDeleteTemplate(): Promise<void> {
+  if (!templateToDelete) return;
+  
+  try {
+    await deleteTemplate(templateToDelete);
+    showToast('Template deleted', 'success');
+    
+    // Refresh
+    await populateTemplateSelect();
+    showTemplateList();
+    
+  } catch (err) {
+    console.error('[Main] Delete error:', err);
+    showToast('Failed to delete template', 'error');
+  } finally {
+    closeDeleteModal();
+  }
+}
+
+/**
+ * Close delete confirmation modal
+ */
+function closeDeleteModal(): void {
+  elements.deleteConfirmModal.classList.add('hidden');
+  templateToDelete = null;
+}
+
+/**
+ * Handle template edit button click
+ */
+async function handleEditTemplate(templateId: string): Promise<void> {
+  console.log('[Template Manager] Edit clicked for template:', templateId);
+  await showTemplateEditor(templateId);
+}
+
+/**
+ * Handle template duplicate button click
+ */
+async function handleDuplicateTemplate(templateId: string): Promise<void> {
+  try {
+    await duplicateTemplate(templateId, state.authState.email!);
+    showToast('Template duplicated!', 'success');
+    await populateTemplateSelect();
+    showTemplateList();
+  } catch (err) {
+    console.error('[Main] Duplicate error:', err);
+    showToast('Failed to duplicate template', 'error');
+  }
+}
+
+/**
+ * Restore all deleted default templates
+ */
+async function handleRestoreAllDefaults(): Promise<void> {
+  const deletedIds = await getDeletedDefaultIds();
+  
+  for (const id of deletedIds) {
+    await restoreDefaultTemplate(id);
+  }
+  
+  showToast(`Restored ${deletedIds.length} default templates`, 'success');
+  await populateTemplateSelect();
+  showTemplateList();
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(str: string): string {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 
 // -----------------------------------------------------------------------------
 // Settings Handlers

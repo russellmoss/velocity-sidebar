@@ -94,7 +94,8 @@ This guide walks you through setting up **both** n8n workflows needed for the SG
        LinkedIn_Profile_Apollo__c, 
        Status, 
        Prospecting_Step_LinkedIn__c,
-       Lead_List_Name__c
+       Lead_List_Name__c,
+       SGA_Self_List_name__c
      FROM Lead
      WHERE OwnerId IN (SELECT Id FROM User WHERE Email = '{{ $json.query.email }}')
        AND Prospecting_Step_LinkedIn__c = false
@@ -108,7 +109,8 @@ This guide walks you through setting up **both** n8n workflows needed for the SG
    - `{{ $json.query.email }}` gets the email from the webhook query parameter
    - Adjust the `Status` values if your Salesforce uses different status names
    - Adjust the `LIMIT` if you need more/fewer leads
-   - The query now includes `Lead_List_Name__c` for list filtering
+   - The query includes both `Lead_List_Name__c` and `SGA_Self_List_name__c` for list filtering
+   - The extension will show leads from either list field in the filter dropdown
 
 ### Step 4: Connect Nodes
 
@@ -142,7 +144,8 @@ This guide walks you through setting up **both** n8n workflows needed for the SG
          "LinkedIn_Profile_Apollo__c": "https://linkedin.com/in/johnsmith",
          "Status": "New",
          "Prospecting_Step_LinkedIn__c": false,
-         "Lead_List_Name__c": "Q1 2025 Prospects"
+         "Lead_List_Name__c": "Q1 2025 Prospects",
+         "SGA_Self_List_name__c": null
        },
        ...
      ]
@@ -351,7 +354,8 @@ GET https://your-n8n-instance.com/webhook/lead-list?email=sga@savvywealth.com
     "LinkedIn_Profile_Apollo__c": "https://linkedin.com/in/johnsmith",
     "Status": "New",
     "Prospecting_Step_LinkedIn__c": false,
-    "Lead_List_Name__c": "Q1 2025 Prospects"
+    "Lead_List_Name__c": "Q1 2025 Prospects",
+    "SGA_Self_List_name__c": null
   }
 ]
 ```
