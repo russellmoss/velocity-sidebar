@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "SGA Velocity Sidebar",
+  "version": "3.1.0",
+  "description": "High-velocity LinkedIn outreach tool for Savvy Wealth SGAs - Direct Salesforce Integration",
+  
+  "permissions": [
+    "identity",
+    "identity.email",
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "clipboardWrite",
+    "tabs"
+  ],
+  
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*"
+  ],
+  
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/in/*",
+        "https://www.linkedin.com/talent/*",
+        "https://www.linkedin.com/recruiter/*"
+      ],
+      "js": ["linkedin-scraper.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "action": {
+    "default_title": "Open SGA Velocity Sidebar"
+  }
+}
+
