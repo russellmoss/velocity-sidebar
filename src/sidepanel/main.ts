@@ -95,7 +95,9 @@ const elements = {
   testZapierBtn: document.getElementById('test-zapier-btn') as HTMLButtonElement,
   saveSettingsBtn: document.getElementById('save-settings-btn') as HTMLButtonElement,
   
-  listFilter: document.getElementById('list-filter') as HTMLSelectElement,
+  listFilterInput: document.getElementById('list-filter-input') as HTMLInputElement,
+  listFilterDropdown: document.getElementById('list-filter-dropdown') as HTMLDivElement,
+  listFilterToggle: document.getElementById('list-filter-toggle') as HTMLButtonElement,
   unsentFilter: document.getElementById('unsent-filter') as HTMLInputElement,
   
   toastContainer: document.getElementById('toast-container') as HTMLDivElement,
@@ -185,7 +187,68 @@ function setupEventListeners(): void {
   elements.copyBtn.addEventListener('click', handleCopy);
   elements.markSentBtn.addEventListener('click', handleMarkSent);
   
-  elements.listFilter.addEventListener('change', handleListFilterChange);
+  // List filter searchable dropdown
+  elements.listFilterInput.addEventListener('input', handleListFilterInput);
+  elements.listFilterInput.addEventListener('focus', () => {
+    elements.listFilterDropdown.classList.remove('hidden');
+    elements.listFilterDropdown.classList.add('show');
+    updateListFilterDropdown();
+  });
+  elements.listFilterInput.addEventListener('blur', () => {
+    // Delay hiding to allow click events to fire
+    setTimeout(() => {
+      elements.listFilterDropdown.classList.add('hidden');
+      elements.listFilterDropdown.classList.remove('show');
+    }, 200);
+  });
+  elements.listFilterToggle.addEventListener('click', () => {
+    elements.listFilterInput.focus();
+  });
+  
+  // Handle dropdown option clicks
+  elements.listFilterDropdown.addEventListener('click', (e) => {
+    const option = (e.target as HTMLElement).closest('.list-filter-option') as HTMLElement;
+    if (option && option.dataset.value) {
+      handleListFilterSelect(option.dataset.value);
+    }
+  });
+  
+  // Keyboard navigation for dropdown
+  let selectedOptionIndex = -1;
+  elements.listFilterInput.addEventListener('keydown', (e) => {
+    const options = Array.from(elements.listFilterDropdown.querySelectorAll('.list-filter-option')) as HTMLElement[];
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedOptionIndex = Math.min(selectedOptionIndex + 1, options.length - 1);
+      options[selectedOptionIndex]?.scrollIntoView({ block: 'nearest' });
+      options.forEach((opt, idx) => {
+        opt.classList.toggle('bg-gray-200', idx === selectedOptionIndex);
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedOptionIndex = Math.max(selectedOptionIndex - 1, -1);
+      if (selectedOptionIndex >= 0) {
+        options[selectedOptionIndex]?.scrollIntoView({ block: 'nearest' });
+      }
+      options.forEach((opt, idx) => {
+        opt.classList.toggle('bg-gray-200', idx === selectedOptionIndex);
+      });
+    } else if (e.key === 'Enter' && selectedOptionIndex >= 0) {
+      e.preventDefault();
+      const option = options[selectedOptionIndex];
+      if (option && option.dataset.value) {
+        handleListFilterSelect(option.dataset.value);
+      }
+    } else if (e.key === 'Escape') {
+      elements.listFilterDropdown.classList.add('hidden');
+      elements.listFilterDropdown.classList.remove('show');
+      elements.listFilterInput.blur();
+    } else {
+      selectedOptionIndex = -1; // Reset on typing
+    }
+  });
+  
   elements.unsentFilter.addEventListener('change', handleUnsentFilterChange);
   
   elements.settingsBtn.addEventListener('click', openSettings);
@@ -310,23 +373,92 @@ function extractUniqueLists(leads: EnrichedLead[]): void {
 }
 
 /**
- * Populate the list filter dropdown
+ * Simple fuzzy search - checks if query matches string (case-insensitive, partial match)
+ */
+function fuzzyMatch(query: string, text: string): boolean {
+  if (!query) return true;
+  const queryLower = query.toLowerCase();
+  const textLower = text.toLowerCase();
+  
+  // Exact match gets highest priority
+  if (textLower === queryLower) return true;
+  
+  // Starts with query
+  if (textLower.startsWith(queryLower)) return true;
+  
+  // Contains query
+  if (textLower.includes(queryLower)) return true;
+  
+  // Fuzzy match: all characters in query appear in order in text
+  let queryIndex = 0;
+  for (let i = 0; i < textLower.length && queryIndex < queryLower.length; i++) {
+    if (textLower[i] === queryLower[queryIndex]) {
+      queryIndex++;
+    }
+  }
+  return queryIndex === queryLower.length;
+}
+
+/**
+ * Populate the list filter dropdown with searchable options
  */
 function populateListFilter(): void {
-  elements.listFilter.innerHTML = '<option value="all">All Lists</option>';
-  state.uniqueLists.forEach(listName => {
-    const option = document.createElement('option');
-    option.value = listName;
-    option.textContent = listName;
-    elements.listFilter.appendChild(option);
-  });
+  updateListFilterDropdown();
   
   // Restore selected filter if it still exists
   if (state.selectedListFilter !== 'all' && state.uniqueLists.includes(state.selectedListFilter)) {
-    elements.listFilter.value = state.selectedListFilter;
+    elements.listFilterInput.value = state.selectedListFilter;
   } else {
-    elements.listFilter.value = 'all';
+    elements.listFilterInput.value = '';
     state.selectedListFilter = 'all';
+  }
+}
+
+/**
+ * Update the dropdown with filtered results based on search query
+ */
+function updateListFilterDropdown(): void {
+  const query = elements.listFilterInput.value.trim().toLowerCase();
+  const dropdown = elements.listFilterDropdown;
+  
+  // Clear existing options
+  dropdown.innerHTML = '';
+  
+  // Always show "All Lists" option
+  const allOption = document.createElement('div');
+  allOption.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer list-filter-option';
+  allOption.dataset.value = 'all';
+  allOption.textContent = 'All Lists';
+  if (state.selectedListFilter === 'all') {
+    allOption.classList.add('bg-savvy-green', 'text-white');
+    allOption.classList.remove('text-gray-700', 'hover:bg-gray-100');
+  }
+  dropdown.appendChild(allOption);
+  
+  // Filter and show matching lists
+  const filteredLists = state.uniqueLists.filter(listName => {
+    if (!query) return true;
+    return fuzzyMatch(query, listName);
+  });
+  
+  filteredLists.forEach(listName => {
+    const option = document.createElement('div');
+    option.className = 'px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer list-filter-option';
+    option.dataset.value = listName;
+    option.textContent = listName;
+    
+    if (state.selectedListFilter === listName) {
+      option.classList.add('bg-savvy-green', 'text-white');
+      option.classList.remove('text-gray-700', 'hover:bg-gray-100');
+    }
+    
+    dropdown.appendChild(option);
+  });
+  
+  // Show dropdown if there's a query or if it should be visible
+  if (query || dropdown.classList.contains('show')) {
+    dropdown.classList.remove('hidden');
+    dropdown.classList.add('show');
   }
 }
 
@@ -350,12 +482,46 @@ function getFilteredLeads(): EnrichedLead[] {
 }
 
 /**
- * Handle list filter change
+ * Handle list filter selection from dropdown
  */
-function handleListFilterChange(): void {
-  state.selectedListFilter = elements.listFilter.value;
+function handleListFilterSelect(value: string): void {
+  state.selectedListFilter = value;
+  if (value === 'all') {
+    elements.listFilterInput.value = '';
+  } else {
+    elements.listFilterInput.value = value;
+  }
+  elements.listFilterDropdown.classList.add('hidden');
+  elements.listFilterDropdown.classList.remove('show');
   state.currentIndex = 0;
   updateLeadUI();
+  updateListFilterDropdown(); // Update to show selected state
+}
+
+/**
+ * Handle list filter input change (search)
+ */
+function handleListFilterInput(): void {
+  const query = elements.listFilterInput.value.trim();
+  updateListFilterDropdown();
+  
+  // If exact match found, auto-select it
+  if (query) {
+    const exactMatch = state.uniqueLists.find(list => 
+      list.toLowerCase() === query.toLowerCase()
+    );
+    if (exactMatch && state.selectedListFilter !== exactMatch) {
+      handleListFilterSelect(exactMatch);
+      return;
+    }
+  } else if (state.selectedListFilter !== 'all') {
+    // If cleared and not already "all", reset to "all"
+    handleListFilterSelect('all');
+    return;
+  }
+  
+  // Just update dropdown, don't change filter yet
+  updateListFilterDropdown();
 }
 
 /**

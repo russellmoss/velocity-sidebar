@@ -88,11 +88,37 @@
         </div>
         <!-- Filters -->
         <div class="flex items-center gap-3">
-          <div class="flex-1">
+          <div class="flex-1 relative">
             <label class="block text-xs text-gray-600 mb-1">List Filter</label>
-            <select id="list-filter" class="w-full border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green">
-              <option value="all">All Lists</option>
-            </select>
+            <div class="relative">
+              <input 
+                type="text" 
+                id="list-filter-input" 
+                class="w-full border rounded-lg px-3 py-1.5 pr-8 text-sm focus:ring-2 focus:ring-savvy-green focus:border-savvy-green"
+                placeholder="Search or select list..."
+                autocomplete="off"
+              >
+              <button 
+                id="list-filter-toggle" 
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                type="button"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div 
+                id="list-filter-dropdown" 
+                class="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+              >
+                <div 
+                  class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer list-filter-option" 
+                  data-value="all"
+                >
+                  All Lists
+                </div>
+              </div>
+            </div>
           </div>
           <div class="flex items-center pt-6">
             <input type="checkbox" id="unsent-filter" class="w-4 h-4 text-savvy-green rounded" checked>
