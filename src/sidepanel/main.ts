@@ -12,7 +12,7 @@ import type {
   ChromeMessage,
 } from '../types';
 import { DEFAULT_TEMPLATES } from '../types';
-import { fetchLeads, logActivity, initApiConfig, setApiConfig, testN8nConnection, testZapierConnection } from '../lib/api';
+import { fetchLeads, logActivity, initApiConfig, setApiConfig, testN8nConnection, testN8nLoggingConnection } from '../lib/api';
 import { authenticateUser, getAuthState, isAuthenticatedWithValidDomain } from '../lib/auth';
 import { getCachedLeads, setCachedLeads, markLeadAsSent, getTemplates, getSettings, setSettings, getLastSyncTime } from '../lib/storage';
 import { generateMessage, getMissingVariables } from '../lib/templates';
@@ -89,10 +89,10 @@ const elements = {
   settingsModal: document.getElementById('settings-modal') as HTMLDivElement,
   closeSettings: document.getElementById('close-settings') as HTMLButtonElement,
   n8nUrlInput: document.getElementById('n8n-url-input') as HTMLInputElement,
-  zapierUrlInput: document.getElementById('zapier-url-input') as HTMLInputElement,
+  n8nLoggingUrlInput: document.getElementById('n8n-logging-url-input') as HTMLInputElement,
   autoAdvanceToggle: document.getElementById('auto-advance-toggle') as HTMLInputElement,
   testN8nBtn: document.getElementById('test-n8n-btn') as HTMLButtonElement,
-  testZapierBtn: document.getElementById('test-zapier-btn') as HTMLButtonElement,
+  testN8nLoggingBtn: document.getElementById('test-n8n-logging-btn') as HTMLButtonElement,
   saveSettingsBtn: document.getElementById('save-settings-btn') as HTMLButtonElement,
   
   listFilterInput: document.getElementById('list-filter-input') as HTMLInputElement,
@@ -129,7 +129,7 @@ async function init(): Promise<void> {
     console.log('[Main] Valid @savvywealth.com email, auto-fetching leads...');
     
     // Load cached leads first (instant UI)
-    state.leads = await getCachedLeads();
+    state.leads = sortLeadsByLastName(await getCachedLeads());
     
     // Extract unique lists and populate filter
     extractUniqueLists(state.leads);
@@ -255,7 +255,7 @@ function setupEventListeners(): void {
   elements.closeSettings.addEventListener('click', closeSettingsModal);
   elements.saveSettingsBtn.addEventListener('click', handleSaveSettings);
   elements.testN8nBtn.addEventListener('click', handleTestN8n);
-  elements.testZapierBtn.addEventListener('click', handleTestZapier);
+  elements.testN8nLoggingBtn.addEventListener('click', handleTestN8nLogging);
   
   elements.settingsModal.addEventListener('click', (e) => {
     if (e.target === elements.settingsModal) closeSettingsModal();
@@ -320,7 +320,8 @@ async function handleSync(): Promise<void> {
     const response = await fetchLeads(state.authState.email);
     
     if (response.success) {
-      state.leads = response.leads.map(convertToEnrichedLead);
+      // Convert and sort leads alphabetically by last name
+      state.leads = sortLeadsByLastName(response.leads.map(convertToEnrichedLead));
       state.currentIndex = 0;
       
       await setCachedLeads(state.leads);
@@ -353,6 +354,29 @@ function convertToEnrichedLead(sf: SalesforceLead): EnrichedLead {
     ...sf,
     fullName: `${sf.FirstName} ${sf.LastName}`.trim(),
   };
+}
+
+/**
+ * Sort leads alphabetically by last name, then first name
+ */
+function sortLeadsByLastName(leads: EnrichedLead[]): EnrichedLead[] {
+  return [...leads].sort((a, b) => {
+    // Sort by last name (case-insensitive)
+    const lastNameA = (a.LastName || '').toLowerCase();
+    const lastNameB = (b.LastName || '').toLowerCase();
+    
+    if (lastNameA < lastNameB) return -1;
+    if (lastNameA > lastNameB) return 1;
+    
+    // If last names are equal, sort by first name
+    const firstNameA = (a.FirstName || '').toLowerCase();
+    const firstNameB = (b.FirstName || '').toLowerCase();
+    
+    if (firstNameA < firstNameB) return -1;
+    if (firstNameA > firstNameB) return 1;
+    
+    return 0;
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -464,6 +488,7 @@ function updateListFilterDropdown(): void {
 
 /**
  * Get filtered leads based on current filter settings
+ * Returns leads sorted alphabetically by last name, then first name
  */
 function getFilteredLeads(): EnrichedLead[] {
   let filtered = [...state.leads];
@@ -478,7 +503,8 @@ function getFilteredLeads(): EnrichedLead[] {
     filtered = filtered.filter(lead => !lead.Prospecting_Step_LinkedIn__c);
   }
   
-  return filtered;
+  // Ensure filtered results are sorted (in case filtering changed order)
+  return sortLeadsByLastName(filtered);
 }
 
 /**
@@ -777,7 +803,7 @@ async function handleMarkSent(): Promise<void> {
 async function openSettings(): Promise<void> {
   const settings = await getSettings();
   elements.n8nUrlInput.value = settings.n8nWebhookUrl;
-  elements.zapierUrlInput.value = settings.zapierWebhookUrl;
+  elements.n8nLoggingUrlInput.value = settings.n8nLoggingWebhookUrl;
   elements.autoAdvanceToggle.checked = settings.autoAdvanceOnSend;
   elements.settingsModal.classList.remove('hidden');
 }
@@ -788,11 +814,11 @@ function closeSettingsModal(): void {
 
 async function handleSaveSettings(): Promise<void> {
   const n8nUrl = elements.n8nUrlInput.value.trim();
-  const zapierUrl = elements.zapierUrlInput.value.trim();
+  const n8nLoggingUrl = elements.n8nLoggingUrlInput.value.trim();
   const autoAdvance = elements.autoAdvanceToggle.checked;
   
-  await setSettings({ n8nWebhookUrl: n8nUrl, zapierWebhookUrl: zapierUrl, autoAdvanceOnSend: autoAdvance });
-  await setApiConfig({ n8nWebhookUrl: n8nUrl, zapierWebhookUrl: zapierUrl });
+  await setSettings({ n8nWebhookUrl: n8nUrl, n8nLoggingWebhookUrl: n8nLoggingUrl, autoAdvanceOnSend: autoAdvance });
+  await setApiConfig({ n8nWebhookUrl: n8nUrl, n8nLoggingWebhookUrl: n8nLoggingUrl });
   
   showToast('Settings saved!', 'success');
   closeSettingsModal();
@@ -802,7 +828,7 @@ async function handleTestN8n(): Promise<void> {
   elements.testN8nBtn.disabled = true;
   elements.testN8nBtn.textContent = 'Testing...';
   
-  await setApiConfig({ n8nWebhookUrl: elements.n8nUrlInput.value.trim(), zapierWebhookUrl: elements.zapierUrlInput.value.trim() });
+  await setApiConfig({ n8nWebhookUrl: elements.n8nUrlInput.value.trim(), n8nLoggingWebhookUrl: elements.n8nLoggingUrlInput.value.trim() });
   const result = await testN8nConnection();
   showToast(result.message, result.success ? 'success' : 'error');
   
@@ -810,16 +836,16 @@ async function handleTestN8n(): Promise<void> {
   elements.testN8nBtn.textContent = 'Test Connection';
 }
 
-async function handleTestZapier(): Promise<void> {
-  elements.testZapierBtn.disabled = true;
-  elements.testZapierBtn.textContent = 'Testing...';
+async function handleTestN8nLogging(): Promise<void> {
+  elements.testN8nLoggingBtn.disabled = true;
+  elements.testN8nLoggingBtn.textContent = 'Testing...';
   
-  await setApiConfig({ n8nWebhookUrl: elements.n8nUrlInput.value.trim(), zapierWebhookUrl: elements.zapierUrlInput.value.trim() });
-  const result = await testZapierConnection();
+  await setApiConfig({ n8nWebhookUrl: elements.n8nUrlInput.value.trim(), n8nLoggingWebhookUrl: elements.n8nLoggingUrlInput.value.trim() });
+  const result = await testN8nLoggingConnection();
   showToast(result.message, result.success ? 'success' : 'error');
   
-  elements.testZapierBtn.disabled = false;
-  elements.testZapierBtn.textContent = 'Test Connection';
+  elements.testN8nLoggingBtn.disabled = false;
+  elements.testN8nLoggingBtn.textContent = 'Test Connection';
 }
 
 // -----------------------------------------------------------------------------

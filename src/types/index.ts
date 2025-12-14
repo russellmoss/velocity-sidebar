@@ -1,6 +1,6 @@
 // =============================================================================
 // SGA VELOCITY SIDEBAR v3.1 - TYPE DEFINITIONS
-// Hybrid Architecture: n8n (read) + Zapier (write) + Salesforce
+// Hybrid Architecture: n8n (read & write) + Salesforce
 // =============================================================================
 
 // -----------------------------------------------------------------------------
@@ -101,7 +101,7 @@ export interface FetchLeadsResponse {
   error?: string;
 }
 
-/** Request to Zapier webhook */
+/** Request to n8n webhook (for logging activity) */
 export interface LogActivityPayload {
   leadId: string;
   sgaEmail: string;
@@ -109,7 +109,7 @@ export interface LogActivityPayload {
   action: 'linkedin_sent';
 }
 
-/** Response from Zapier webhook */
+/** Response from n8n webhook (for logging activity) */
 export interface LogActivityResponse {
   success: boolean;
   error?: string;
@@ -181,8 +181,8 @@ export const STORAGE_KEYS = {
 // API Configuration
 // -----------------------------------------------------------------------------
 export interface ApiConfig {
-  n8nWebhookUrl: string;
-  zapierWebhookUrl: string;
+  n8nWebhookUrl: string; // For fetching leads
+  n8nLoggingWebhookUrl: string; // For logging message sent
 }
 
 // -----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 // =============================================================================
-// API SERVICE - n8n (Read) + Zapier (Write)
+// API SERVICE - n8n (Read & Write)
 // =============================================================================
 
 import type {
@@ -16,21 +16,21 @@ import type {
 
 let config: ApiConfig = {
   n8nWebhookUrl: '',
-  zapierWebhookUrl: '',
+  n8nLoggingWebhookUrl: '',
 };
 
 /**
  * Initialize API configuration from storage
  */
 export async function initApiConfig(): Promise<void> {
-  const stored = await chrome.storage.local.get(['n8nWebhookUrl', 'zapierWebhookUrl']);
+  const stored = await chrome.storage.local.get(['n8nWebhookUrl', 'n8nLoggingWebhookUrl']);
   config = {
     n8nWebhookUrl: stored.n8nWebhookUrl || '',
-    zapierWebhookUrl: stored.zapierWebhookUrl || '',
+    n8nLoggingWebhookUrl: stored.n8nLoggingWebhookUrl || '',
   };
   console.log('[API] Config loaded:', {
-    n8n: config.n8nWebhookUrl ? '✓' : '✗',
-    zapier: config.zapierWebhookUrl ? '✓' : '✗',
+    leadList: config.n8nWebhookUrl ? '✓' : '✗',
+    messageLogging: config.n8nLoggingWebhookUrl ? '✓' : '✗',
   });
 }
 
@@ -41,7 +41,7 @@ export async function setApiConfig(newConfig: Partial<ApiConfig>): Promise<void>
   config = { ...config, ...newConfig };
   await chrome.storage.local.set({
     n8nWebhookUrl: config.n8nWebhookUrl,
-    zapierWebhookUrl: config.zapierWebhookUrl,
+    n8nLoggingWebhookUrl: config.n8nLoggingWebhookUrl,
   });
 }
 
@@ -148,31 +148,31 @@ export async function fetchLeads(email: string): Promise<FetchLeadsResponse> {
 }
 
 // =============================================================================
-// LOG ACTIVITY (Zapier POST Webhook)
+// LOG ACTIVITY (n8n POST Webhook)
 // =============================================================================
 
 /**
- * Log LinkedIn activity to Salesforce via Zapier webhook
+ * Log LinkedIn activity to Salesforce via n8n webhook
  * 
- * Expected Zapier workflow:
- * 1. Webhooks by Zapier → Catch Hook
- * 2. Salesforce → Update Lead
+ * Expected n8n workflow:
+ * 1. Webhook (POST) receives activity data
+ * 2. Salesforce node → Update Lead
  *    - Prospecting_Step_LinkedIn__c = TRUE
  * 
  * @param payload - Activity data to log
  */
 export async function logActivity(payload: LogActivityPayload): Promise<LogActivityResponse> {
-  if (!config.zapierWebhookUrl) {
+  if (!config.n8nLoggingWebhookUrl) {
     return {
       success: false,
-      error: 'Zapier webhook URL not configured. Go to Settings.',
+      error: 'Message sent logging URL not configured. Go to Settings.',
     };
   }
 
   try {
-    console.log('[API] Logging activity to Zapier:', payload.leadId);
+    console.log('[API] Logging activity to n8n:', payload.leadId);
 
-    const response = await fetch(config.zapierWebhookUrl, {
+    const response = await fetch(config.n8nLoggingWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -182,10 +182,10 @@ export async function logActivity(payload: LogActivityPayload): Promise<LogActiv
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[API] Zapier error:', response.status, errorText);
+      console.error('[API] n8n logging error:', response.status, errorText);
       return {
         success: false,
-        error: `Zapier returned ${response.status}`,
+        error: `n8n returned ${response.status}`,
       };
     }
 
@@ -230,15 +230,15 @@ export async function testN8nConnection(): Promise<{ success: boolean; message: 
 }
 
 /**
- * Test Zapier webhook connection
+ * Test n8n logging webhook connection
  */
-export async function testZapierConnection(): Promise<{ success: boolean; message: string }> {
-  if (!config.zapierWebhookUrl) {
-    return { success: false, message: 'Zapier webhook URL not set' };
+export async function testN8nLoggingConnection(): Promise<{ success: boolean; message: string }> {
+  if (!config.n8nLoggingWebhookUrl) {
+    return { success: false, message: 'Message sent logging URL not set' };
   }
 
   try {
-    const response = await fetch(config.zapierWebhookUrl, {
+    const response = await fetch(config.n8nLoggingWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -249,8 +249,8 @@ export async function testZapierConnection(): Promise<{ success: boolean; messag
     });
 
     return response.ok
-      ? { success: true, message: `Zapier connection OK (${response.status})` }
-      : { success: false, message: `Zapier returned ${response.status}` };
+      ? { success: true, message: `Message logging connection OK (${response.status})` }
+      : { success: false, message: `n8n returned ${response.status}` };
   } catch (error) {
     return {
       success: false,

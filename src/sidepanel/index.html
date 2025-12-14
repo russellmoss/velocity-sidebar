@@ -240,14 +240,14 @@
         </div>
         <div class="p-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">n8n Webhook URL (for fetching leads)</label>
-            <input type="url" id="n8n-url-input" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://your-n8n.com/webhook/sga-leads">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Lead List Workflow URL</label>
+            <input type="url" id="n8n-url-input" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://your-n8n.com/webhook/lead-list">
             <button id="test-n8n-btn" class="mt-2 text-sm text-savvy-green hover:underline">Test Connection</button>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Zapier Webhook URL (for logging activity)</label>
-            <input type="url" id="zapier-url-input" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://hooks.zapier.com/hooks/catch/...">
-            <button id="test-zapier-btn" class="mt-2 text-sm text-savvy-green hover:underline">Test Connection</button>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Message Sent Logging URL</label>
+            <input type="url" id="n8n-logging-url-input" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="https://your-n8n.com/webhook/message-sent">
+            <button id="test-n8n-logging-btn" class="mt-2 text-sm text-savvy-green hover:underline">Test Connection</button>
           </div>
           <div class="flex items-center justify-between">
             <label class="text-sm text-gray-700">Auto-advance after marking sent</label>

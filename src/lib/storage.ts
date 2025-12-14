@@ -78,7 +78,7 @@ export interface AppSettings extends ApiConfig {
 
 const DEFAULT_SETTINGS: AppSettings = {
   n8nWebhookUrl: '',
-  zapierWebhookUrl: '',
+  n8nLoggingWebhookUrl: '',
   autoAdvanceOnSend: true
 };
 
