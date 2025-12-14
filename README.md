@@ -1,113 +1,237 @@
 # SGA Velocity Sidebar v3.1
 
-**High-velocity LinkedIn outreach tool for Savvy Wealth SGAs - Direct Salesforce Integration**
+**High-velocity LinkedIn outreach tool for Savvy Wealth Strategic Growth Advisors**
+
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](package.json)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-green.svg)](https://developer.chrome.com/docs/extensions/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-orange.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 
 ---
 
 ## 🎯 Overview
 
-The **SGA Velocity Sidebar** is a Chrome Extension designed to dramatically accelerate LinkedIn outreach for Savvy Wealth SGAs (Strategic Growth Advisors). This tool streamlines the entire outreach workflow by seamlessly connecting Salesforce lead data with LinkedIn profiles, enabling SGAs to touch more leads per week than ever before while maintaining organization and compliance.
+The **SGA Velocity Sidebar** is a Chrome Extension (Manifest V3) designed to dramatically accelerate LinkedIn outreach for Savvy Wealth's Strategic Growth Advisors (SGAs). This enterprise-grade tool seamlessly connects Salesforce lead data with LinkedIn profiles, enabling SGAs to touch 3-5x more leads per week while maintaining organization, compliance, and a human-in-the-loop approach that bypasses LinkedIn bot restrictions.
 
 ### The Problem It Solves
 
-Traditional LinkedIn outreach is slow and manual:
-- Switching between Salesforce and LinkedIn
-- Copying lead information manually
-- Writing messages from scratch
-- Losing track of who has been contacted
-- Struggling with LinkedIn's bot restrictions
+Traditional LinkedIn outreach workflows are slow and manual:
+- **Context Switching**: Constantly switching between Salesforce and LinkedIn
+- **Manual Data Entry**: Copying lead information manually between systems
+- **Message Writing**: Writing personalized messages from scratch for each lead
+- **Activity Tracking**: Losing track of who has been contacted and when
+- **Bot Restrictions**: Risk of triggering LinkedIn's automated detection systems
 
 ### The Solution
 
 A streamlined Chrome Extension that:
-- ✅ Pulls leads directly from Salesforce lists
-- ✅ Automatically navigates to LinkedIn profiles
-- ✅ Generates copy-paste ready, personalized messages
+- ✅ Pulls leads directly from Salesforce lists with role-based access control
+- ✅ Automatically navigates to LinkedIn profiles with one click
+- ✅ Generates copy-paste ready, personalized messages using dynamic templates
 - ✅ Logs activities back to Salesforce with one click
-- ✅ Works within LinkedIn's restrictions (human-in-the-loop)
-- ✅ Supports custom message templates for A/B testing
+- ✅ Works within LinkedIn's restrictions (human-in-the-loop design)
+- ✅ Supports custom message templates for A/B testing and personalization
+- ✅ Handles Salesforce pagination automatically (unlimited lead counts)
 
 ---
 
-## 🚀 Key Features
+## 🚀 Quick Start
 
-### 1. **Direct Salesforce Integration**
-- Sync leads from your assigned Salesforce lists (`Lead_List_Name__c` and `SGA_Self_List_name__c`)
-- Filter by list name or view all leads
-- Filter by "Unsent Only" to focus on new prospects
-- Automatic authentication via Chrome profile email
-- Only shows leads assigned to you (role-based security)
+Get up and running in 5 steps:
 
-### 2. **LinkedIn Profile Navigation**
-- One-click navigation to LinkedIn profiles
-- Automatic profile data scraping (name, title, company, location, headline, accreditations)
-- Works on LinkedIn profile pages, Talent Hub, and Recruiter
+1. **Prerequisites**: Ensure you're signed into Chrome with an `@savvywealth.com` email
+2. **Build**: Run `npm install && npm run build` in the project directory
+3. **Load Extension**: Open `chrome://extensions/`, enable Developer mode, click "Load unpacked", select the `dist/` folder
+4. **Configure Webhooks**: Open extension settings (⚙️), enter your n8n and Zapier webhook URLs
+5. **Sync Leads**: Click "Sync from Salesforce" to load your assigned leads
 
-### 3. **Smart Message Generation**
-- **Pre-built Templates**: Default templates for introductions, follow-ups, and reconnects
-- **Custom Templates**: Create, edit, and manage your own message templates
-- **Dynamic Variables**: Auto-populate with lead data:
-  - `{{firstName}}`, `{{lastName}}`, `{{fullName}}`
-  - `{{company}}`, `{{title}}`, `{{location}}`
-  - `{{headline}}`, `{{accreditations}}`, `{{leadScore}}`
-- **Template Categories**: Organize by Intro, Follow-up, Reconnect, or Custom
-- **A/B Testing**: Try different messaging approaches with multiple templates
+> **Important**: See [Installation](#-installation) and [Configuration](#-configuration) sections for detailed setup instructions.
 
-### 4. **One-Click Activity Logging**
+---
+
+## ✨ Key Features
+
+### 1. Direct Salesforce Integration
+
+**Role-Based Access Control**
+- **Admins**: See ALL leads across the organization
+- **SGAs**: See only leads assigned to them (filtered via SOQL `OwnerId`)
+- Automatic email domain validation (`@savvywealth.com` required)
+
+**Pagination Support**
+- Handles Salesforce's 2000-record limit automatically
+- Loops through `queryMore` endpoint until all records are fetched
+- No manual pagination required - works with lead lists of any size
+
+**List Filtering**
+- Filter by `Lead_List_Name__c` (assigned lists)
+- Filter by `SGA_Self_List_name__c` (self-assigned lists)
+- Fuzzy search for quick list navigation
+- "Unsent Only" toggle to focus on new prospects
+
+**Lead Fields Retrieved**
+- **Core Fields**: `Id`, `FirstName`, `LastName`, `Company`, `Title`, `Status`
+- **Custom Fields**: 
+  - `Savvy_Lead_Score__c` - Lead quality score
+  - `LinkedIn_Profile_Apollo__c` - LinkedIn profile URL
+  - `Prospecting_Step_LinkedIn__c` - Message sent flag
+  - `Lead_List_Name__c` - Assigned list name
+  - `SGA_Self_List_name__c` - Self-assigned list name
+
+### 2. LinkedIn Profile Navigation & Scraping
+
+**Intelligent Profile Detection**
+- Works on standard LinkedIn profile pages (`/in/`)
+- Supports LinkedIn Talent Hub (`/talent/`)
+- Supports LinkedIn Recruiter (`/recruiter/`)
+- Automatic SPA navigation detection for React routing
+
+**MutationObserver-Based Scraping**
+- Waits for React hydration before scraping (not setTimeout-based)
+- Reliable data extraction even on slow-loading pages
+- Observes DOM mutations for dynamic content
+
+**Data Extracted**
+- Name (first, last, full)
+- Job title and company
+- Professional headline
+- Location
+- Accreditations (CFP®, CFA, CIMA®, etc.)
+- Profile URL validation
+
+### 3. Smart Message Generation
+
+**System Default Templates**
+- Pre-built templates for introductions, follow-ups, and reconnects
+- Optimized for financial advisor outreach
+- Read-only system templates (cannot be deleted)
+
+**User Templates (Full CRUD)**
+- Create, edit, delete, and duplicate custom templates
+- Stored in `chrome.storage.sync` (syncs across Chrome profiles/devices)
+- Organize by category: Intro, Follow-up, Reconnect, Custom
+- Template management UI with inline editing
+
+**Dynamic Variables**
+Auto-populate messages with lead data:
+- `{{firstName}}` - Lead's first name
+- `{{lastName}}` - Lead's last name
+- `{{fullName}}` - Combined first + last name
+- `{{company}}` - Company/firm name
+- `{{title}}` - Job title
+- `{{location}}` - Geographic location
+- `{{headline}}` - LinkedIn headline
+- `{{accreditations}}` - Professional credentials (CFP®, CFA, etc.)
+- `{{leadScore}}` - Savvy Lead Score value
+
+**Template Features**
+- Character count display
+- Missing variable warnings
+- Copy-to-clipboard with one click
+- Template preview before generation
+
+### 4. One-Click Activity Logging
+
+**Salesforce Integration**
 - Mark leads as "Sent" directly from the extension
-- Automatically updates Salesforce `Prospecting_Step_LinkedIn__c` field
+- Automatically updates `Prospecting_Step_LinkedIn__c = true` in Salesforce
 - Logs timestamp, SGA email, and action type
-- Keeps your Salesforce records organized and up-to-date
+- Real-time sync with Salesforce records
 
-### 5. **Streamlined Workflow**
-- Side panel UI that stays open while browsing LinkedIn
-- Keyboard shortcuts for rapid navigation:
-  - `⌘+→` (Mac) / `Ctrl+→` (Windows): Next lead
-  - `⌘+S` (Mac) / `Ctrl+S` (Windows): Mark as sent
-- Auto-advance to next lead after marking sent (optional)
-- Character count and missing variable warnings
+**Activity Tracking**
+- Visual indicators for sent vs. unsent leads
+- "Unsent Only" filter to focus on new prospects
+- Activity history maintained in Salesforce
 
-### 6. **Human-in-the-Loop Design**
+### 5. Keyboard Shortcuts
+
+Accelerate your workflow with keyboard shortcuts:
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘+→` / `Ctrl+→` | Navigate to next lead |
+| `⌘+←` / `Ctrl+←` | Navigate to previous lead |
+| `⌘+S` / `Ctrl+S` | Mark current lead as sent |
+| `Escape` | Close modals |
+
+### 6. Human-in-the-Loop Design
+
+**LinkedIn Compliance**
 - You control every message before sending
 - Copy-paste workflow (not automated sending)
 - Bypasses LinkedIn bot restrictions
 - Maintains authentic, personal outreach
 
+**Workflow Control**
+- Review and customize messages before sending
+- Optional auto-advance to next lead after marking sent
+- Full control over message timing and content
+
 ---
 
-## 📋 How It Works
+## 📋 Complete Workflow
 
-### The Complete Workflow
+### Step-by-Step User Journey
 
 ```
-1. SGA opens extension → Authenticates via Chrome profile
+┌─────────────────────────────────────────────────────────────────┐
+│                    SGA VELOCITY SIDEBAR WORKFLOW                │
+└─────────────────────────────────────────────────────────────────┘
+
+1. SGA opens extension
    ↓
-2. Syncs leads from Salesforce (filtered by assigned lists)
+   [Chrome Identity API reads profile email]
    ↓
-3. Views lead details in sidebar (name, company, title, lead score)
+2. Extension authenticates via @savvywealth.com email
    ↓
-4. Clicks "Open LinkedIn" → Navigates to profile
+   [GET request to n8n webhook with email parameter]
    ↓
-5. Extension scrapes LinkedIn profile data automatically
+3. n8n workflow queries Salesforce
    ↓
-6. Selects message template → Variables auto-populate
+   [SOQL filtered by OwnerId + pagination loop]
    ↓
-7. Reviews and customizes message if needed
+4. Salesforce returns lead records (all pages)
    ↓
-8. Copies message → Pastes into LinkedIn message
+   [n8n formats and returns JSON array]
    ↓
-9. Sends message on LinkedIn
+5. Extension displays leads in sidebar
    ↓
-10. Clicks "✓ Sent" → Logs activity in Salesforce
+   [SGA selects a lead from the list]
+   ↓
+6. Extension shows lead details (name, company, title, score)
+   ↓
+   [SGA clicks "Open LinkedIn" button]
+   ↓
+7. Extension navigates to LinkedIn profile
+   ↓
+   [Content script scrapes profile data via MutationObserver]
+   ↓
+8. LinkedIn data enriches lead (headline, location, accreditations)
+   ↓
+   [SGA selects message template from dropdown]
+   ↓
+9. Extension generates message with dynamic variables
+   ↓
+   [SGA reviews and customizes message if needed]
+   ↓
+10. SGA copies message → Pastes into LinkedIn message → Sends
     ↓
-11. Auto-advances to next lead (optional)
+    [SGA clicks "✓ Sent" button]
     ↓
-12. Repeat for next lead
+11. Extension sends POST to Zapier webhook
+    ↓
+    [Zapier updates Salesforce: Prospecting_Step_LinkedIn__c = true]
+    ↓
+12. Lead marked as sent in extension UI
+    ↓
+    [Optional: Auto-advance to next lead]
+    ↓
+13. Repeat for next lead
 ```
 
 ### Integration with SGA Command Center
 
-After initial LinkedIn outreach, SGAs can continue the sequence in the **SGA Command Center**:
+After initial LinkedIn outreach via this extension, SGAs can continue the sequence in the **SGA Command Center**:
 
 1. **LinkedIn Message** (via this extension) ✅
 2. **SMS Messages** (via SGA Command Center)
@@ -144,48 +268,16 @@ All activities are logged directly in Salesforce, providing:
 
 ---
 
-## 🛠️ Technical Details
-
-### Architecture
-
-- **Frontend**: Chrome Extension (Manifest V3)
-- **Backend**: n8n workflows for Salesforce integration
-- **Authentication**: Chrome Identity API (`chrome.identity.getProfileUserInfo`)
-- **Storage**: Chrome Storage API (local + sync)
-- **Build**: Vite + TypeScript + Tailwind CSS
-
-### Security
-
-- **Role-Based Access**: Only shows leads assigned to the logged-in SGA
-- **Email Validation**: Requires `@savvywealth.com` domain
-- **Secure API**: n8n webhooks with email-based filtering
-- **Salesforce Security**: SOQL queries filtered by OwnerId
-
-### Data Flow
-
-```
-Chrome Extension
-    ↓ (GET request with email)
-n8n Webhook
-    ↓ (SOQL query filtered by OwnerId)
-Salesforce
-    ↓ (Lead records)
-n8n
-    ↓ (JSON response)
-Chrome Extension
-    ↓ (Display in sidebar)
-```
-
----
-
-## 📦 Installation
+## 🛠️ Installation
 
 ### Prerequisites
 
-- Google Chrome browser
-- Chrome profile signed in with `@savvywealth.com` email
-- n8n workflows configured (see `documentation/` folder)
-- Salesforce leads assigned to your user account
+- **Google Chrome** browser (latest version recommended)
+- **Chrome profile** signed in with `@savvywealth.com` email address
+- **n8n workflows** configured (see [n8n Setup](#n8n-webhook-setup))
+- **Zapier webhook** configured (see [Zapier Setup](#zapier-webhook-setup))
+- **Salesforce leads** assigned to your user account
+- **Node.js** (v16 or higher) and npm (for building from source)
 
 ### Build from Source
 
@@ -206,31 +298,131 @@ npm run build
 ### Load in Chrome
 
 1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top-right)
-3. Click "Load unpacked"
+2. Enable **"Developer mode"** (toggle in top-right corner)
+3. Click **"Load unpacked"**
 4. Select the `dist/` folder from this project
 5. The extension icon should appear in your Chrome toolbar
 
 ### Initial Setup
 
 1. **Configure Webhooks** (one-time setup):
-   - Click the settings icon (⚙️) in the extension
-   - Enter your n8n webhook URLs:
-     - **Lead List Workflow URL**: For fetching leads
-     - **Message Sent Logging URL**: For logging activities
-   - Click "Test Connection" to verify
-   - Click "Save Settings"
+   - Click the extension icon in your Chrome toolbar
+   - Click the settings icon (⚙️) in the extension footer
+   - Enter your webhook URLs:
+     - **Lead List Workflow URL**: Your n8n webhook URL for fetching leads
+     - **Message Sent Logging URL**: Your Zapier webhook URL for logging activities
+   - Click **"Test Connection"** for each webhook to verify
+   - Click **"Save Settings"**
 
 2. **Sync Leads**:
-   - Click "Sync from Salesforce" button
-   - Leads will load automatically
+   - Click **"Sync from Salesforce"** button in the extension
+   - Leads will load automatically (may take a moment for large lists)
 
 3. **Start Outreach**:
    - Select a lead from the list
-   - Click "Open LinkedIn" to navigate to their profile
+   - Click **"Open LinkedIn"** to navigate to their profile
    - Select a message template
-   - Copy and paste the message
-   - Mark as "Sent" when done
+   - Copy and paste the generated message
+   - Mark as **"Sent"** when done
+
+---
+
+## ⚙️ Configuration
+
+### Settings
+
+Access settings via the ⚙️ icon in the extension footer.
+
+**Available Settings:**
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| **Lead List Workflow URL** | n8n webhook URL for fetching leads from Salesforce | Yes |
+| **Message Sent Logging URL** | Zapier webhook URL for logging activities to Salesforce | Yes |
+| **Auto-advance after marking sent** | Automatically move to next lead after marking current as sent | No |
+
+### n8n Webhook Setup
+
+The n8n workflow handles **READING** Salesforce data and returns JSON arrays of lead records.
+
+**Required Configuration:**
+- **HTTP Method**: `GET`
+- **Query Parameter**: `email` (SGA's email address)
+- **Response Format**: JSON array of Lead records
+
+**Detailed Setup Instructions:**
+See [`documentation/N8N_COMPLETE_SETUP.md`](documentation/N8N_COMPLETE_SETUP.md) for complete n8n workflow configuration.
+
+**Key n8n Workflow Features:**
+- Role-based SOQL query filtering (`OwnerId` for SGAs, all leads for Admins)
+- Automatic pagination handling (loops through `queryMore` endpoint)
+- Returns all lead records regardless of count
+- Extracts unique list names for frontend filtering
+
+**Example n8n Webhook Request:**
+```
+GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
+```
+
+**Example n8n Webhook Response:**
+```json
+[
+  {
+    "Id": "00Qxx000000xxxxx",
+    "FirstName": "John",
+    "LastName": "Doe",
+    "Company": "ABC Financial",
+    "Title": "Financial Advisor",
+    "Savvy_Lead_Score__c": 85,
+    "LinkedIn_Profile_Apollo__c": "https://linkedin.com/in/johndoe",
+    "Status": "New",
+    "Prospecting_Step_LinkedIn__c": false,
+    "Lead_List_Name__c": "Q1 2024 Prospects",
+    "SGA_Self_List_name__c": "High Priority"
+  },
+  ...
+]
+```
+
+### Zapier Webhook Setup
+
+The Zapier webhook handles **WRITING** activity logs to Salesforce.
+
+**Required Configuration:**
+- **HTTP Method**: `POST`
+- **Content-Type**: `application/json`
+- **Action**: Update Salesforce Lead record
+
+**Detailed Setup Instructions:**
+See [`documentation/WEBHOOK_SETUP_GUIDE.md`](documentation/WEBHOOK_SETUP_GUIDE.md) for complete Zapier webhook configuration.
+
+**Zapier Workflow Steps:**
+1. **Webhooks by Zapier** - Catch Hook (receives POST request)
+2. **Salesforce** - Update Lead
+   - Set `Prospecting_Step_LinkedIn__c = true`
+   - Filter by Lead `Id`
+
+**Example Zapier Webhook Request:**
+```json
+POST https://hooks.zapier.com/hooks/catch/1234567/abcdefg/
+
+{
+  "leadId": "00Qxx000000xxxxx",
+  "sgaEmail": "sga@savvywealth.com",
+  "timestamp": "2024-12-15T10:30:00Z",
+  "action": "linkedin_sent"
+}
+```
+
+**Example Zapier Webhook Response:**
+```json
+{
+  "success": true,
+  "leadId": "00Qxx000000xxxxx"
+}
+```
+
+> **Important**: The hybrid architecture (n8n for reads, Zapier for writes) is designed for team familiarity with Zapier and n8n's superior JSON array handling capabilities.
 
 ---
 
@@ -243,8 +435,9 @@ npm run build
 3. **Filter Leads**: 
    - Use "List Filter" dropdown to select a specific list
    - Toggle "Unsent Only" to show only new leads
+   - Use fuzzy search to quickly find lists
 4. **Select Lead**: Click on a lead from the list
-5. **View Details**: See lead information in the sidebar
+5. **View Details**: See lead information in the sidebar (name, company, title, lead score)
 6. **Open LinkedIn**: Click "Open LinkedIn" button
 7. **Generate Message**: 
    - Select a template from the dropdown
@@ -254,50 +447,163 @@ npm run build
 9. **Paste & Send**: Paste into LinkedIn message and send
 10. **Mark Sent**: Click "✓ Sent" to log in Salesforce
 
-### Advanced Features
+### Custom Templates
 
-#### Custom Templates
-
+**Create Template:**
 1. Click the gear icon (⚙️) next to template dropdown
-2. Click "New Template" to create your own
-3. Use variables: `{{firstName}}`, `{{company}}`, etc.
-4. Organize by category (Intro, Follow-up, Reconnect, Custom)
-5. Edit, duplicate, or delete templates anytime
+2. Click "New Template" button
+3. Enter template name, content, and category
+4. Use variables: `{{firstName}}`, `{{company}}`, etc.
+5. Click "Save"
 
-#### Keyboard Shortcuts
+**Edit Template:**
+1. Click gear icon (⚙️) next to template dropdown
+2. Click on template name in the list
+3. Modify name, content, or category
+4. Click "Save"
 
-- `⌘+→` / `Ctrl+→`: Navigate to next lead
-- `⌘+←` / `Ctrl+←`: Navigate to previous lead
-- `⌘+S` / `Ctrl+S`: Mark current lead as sent
-- `Escape`: Close modals
+**Delete Template:**
+1. Click gear icon (⚙️) next to template dropdown
+2. Click trash icon (🗑️) next to template
+3. Confirm deletion
 
-#### List Filtering
+**Duplicate Template:**
+1. Click gear icon (⚙️) next to template dropdown
+2. Click duplicate icon (📋) next to template
+3. Edit the duplicated template as needed
 
-- **Search Lists**: Type in the list filter to fuzzy search
+**Template Categories:**
+- **Intro**: First-time outreach messages
+- **Follow-up**: Follow-up messages for previous contacts
+- **Reconnect**: Reconnecting with past contacts
+- **Custom**: Your own custom categories
+
+### List Filtering
+
+**Search Lists:**
+- Type in the list filter dropdown to fuzzy search
+- Matches list names containing your search term
+
+**Filter Options:**
 - **All Lists**: Select "All Lists" to see all leads
-- **Specific List**: Select a list name to filter leads
-- **Unsent Only**: Toggle to show only leads not yet contacted
+- **Specific List**: Select a list name to filter leads by `Lead_List_Name__c` or `SGA_Self_List_name__c`
+- **Unsent Only**: Toggle to show only leads where `Prospecting_Step_LinkedIn__c = false`
+
+**List Display:**
+- Leads sorted alphabetically by last name
+- Lead count shown in list filter dropdown
+- Visual indicators for sent vs. unsent leads
+
+### Keyboard Shortcuts
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `⌘+→` / `Ctrl+→` | Next Lead | Navigate to next lead in list |
+| `⌘+←` / `Ctrl+←` | Previous Lead | Navigate to previous lead in list |
+| `⌘+S` / `Ctrl+S` | Mark as Sent | Mark current lead as sent and log to Salesforce |
+| `Escape` | Close Modal | Close template management or settings modal |
 
 ---
 
-## 🔧 Configuration
+## 🏗️ Technical Architecture
 
-### Settings
+### Data Flow
 
-Access settings via the ⚙️ icon in the extension footer.
+```mermaid
+graph TB
+    A[Chrome Extension] -->|GET ?email=user@savvywealth.com| B[n8n Webhook]
+    B -->|SOQL Query filtered by OwnerId| C[Salesforce API]
+    C -->|Lead Records + Pagination| B
+    B -->|Loop queryMore until done| C
+    B -->|JSON Array of Leads| A
+    A -->|Display Leads| D[Side Panel UI]
+    D -->|User Clicks Open LinkedIn| E[LinkedIn Profile]
+    E -->|Content Script Scrapes| F[MutationObserver]
+    F -->|Profile Data| A
+    A -->|User Clicks Sent| G[Zapier Webhook]
+    G -->|Update Lead| C
+    C -->|Prospecting_Step_LinkedIn__c = true| G
+    G -->|Success Response| A
+```
 
-**Available Settings:**
-- **Lead List Workflow URL**: n8n webhook for fetching leads
-- **Message Sent Logging URL**: n8n webhook for logging activities
-- **Auto-advance after marking sent**: Automatically move to next lead
+### Architecture Overview
 
-### n8n Workflow Setup
+**Hybrid Backend Architecture:**
+- **n8n**: Handles READING Salesforce data (returns JSON arrays)
+- **Zapier**: Handles WRITING activity logs (team familiarity)
+- **Rationale**: n8n's superior JSON array handling + Zapier's team familiarity
 
-See `documentation/N8N_COMPLETE_SETUP.md` for detailed n8n configuration instructions.
+**Frontend:**
+- **Chrome Extension (Manifest V3)**: Side panel UI, content scripts, service worker
+- **TypeScript**: Type-safe JavaScript
+- **Vite**: Fast build tool and dev server
+- **Tailwind CSS**: Utility-first CSS framework
 
-**Required Workflows:**
-1. **Lead List Workflow** (GET): Fetches leads from Salesforce
-2. **Message Sent Logging Workflow** (POST): Logs activities to Salesforce
+**Authentication:**
+- **Method**: `chrome.identity.getProfileUserInfo` (NO OAuth required)
+- **Process**: Reads Chrome profile email automatically
+- **Validation**: Requires `@savvywealth.com` email domain
+- **Security**: Email validated before API calls
+
+**Storage Strategy:**
+- **`chrome.storage.sync`**: User templates (syncs across Chrome profiles/devices)
+- **`chrome.storage.local`**: Leads cache, API config, settings (local only)
+
+**Salesforce Integration:**
+- **Pagination**: Handles Salesforce's 2000-record limit via `queryMore` endpoint looping
+- **Role-Based Access**: SOQL queries filtered by `OwnerId` for SGAs, all leads for Admins
+- **Activity Logging**: Updates `Prospecting_Step_LinkedIn__c = true` when message is marked sent
+
+**LinkedIn Scraper:**
+- **Pattern**: MutationObserver (waits for React hydration, not setTimeout-based)
+- **SPA Navigation**: Observes URL changes for React routing
+- **Page Support**: Profile pages, Talent Hub, LinkedIn Recruiter
+
+### Security Model
+
+**Email-Based Authentication:**
+- Uses Chrome's secure Identity API
+- No OAuth tokens to manage
+- Email validated before any API calls
+
+**Role-Based Access Control:**
+- Only shows leads assigned to the logged-in user (SOQL `OwnerId` filtering)
+- Admins see all leads (configured in n8n workflow)
+- Email domain validation (`@savvywealth.com` required)
+
+**API Security:**
+- All API calls go through n8n/Zapier with email validation
+- Salesforce security enforced at database level (SOQL filtering)
+- No sensitive data stored in extension (leads cached locally only)
+
+**Data Privacy:**
+- Leads cached locally only (not sent to external servers)
+- User templates synced via Chrome's secure sync storage
+- No tracking or analytics
+
+### Pagination Handling
+
+Salesforce limits SOQL queries to **2000 records** per request. The n8n workflow handles pagination automatically:
+
+**Pagination Flow:**
+1. Initial query returns first 2000 records
+2. If `done: false`, `nextRecordsUrl` is present
+3. Loop: Fetch next page using `queryMore` endpoint
+4. Accumulate records across all pages
+5. Continue until `done: true`
+6. Return complete array of all records
+
+**Example Pagination Response:**
+```json
+{
+  "totalSize": 5432,
+  "done": false,
+  "nextRecordsUrl": "/services/data/v58.0/query/01gxx00000xxxxx-2000",
+  "records": [...2000 records...]
+}
+```
+
+The extension receives the complete array after all pages are fetched, so no client-side pagination is needed.
 
 ---
 
@@ -305,67 +611,136 @@ See `documentation/N8N_COMPLETE_SETUP.md` for detailed n8n configuration instruc
 
 ### No Leads Showing
 
-- ✅ Verify you're signed into Chrome with `@savvywealth.com` email
-- ✅ Check that leads are assigned to you in Salesforce
-- ✅ Verify n8n webhook URLs are configured correctly
-- ✅ Check that leads meet criteria (Status, Prospecting_Step_LinkedIn__c, etc.)
+**Possible Causes & Solutions:**
+
+| Issue | Solution |
+|-------|----------|
+| Not signed into Chrome with `@savvywealth.com` email | Sign into Chrome with your Savvy Wealth account |
+| Leads not assigned to you in Salesforce | Verify leads are assigned to your user account in Salesforce |
+| n8n webhook URL not configured | Go to Settings (⚙️) and enter your n8n webhook URL |
+| n8n workflow not active | Check n8n workflow is active and webhook is enabled |
+| Leads don't meet criteria | Verify leads have `Status IN ('New', 'Contacting')` and `LinkedIn_Profile_Apollo__c != null` |
+| Email domain validation failed | Ensure Chrome profile email ends with `@savvywealth.com` |
+
+**Debug Steps:**
+1. Open browser console (F12) and check for errors
+2. Verify n8n webhook URL in Settings
+3. Test n8n connection using "Test Connection" button
+4. Check n8n workflow execution history
+5. Verify Salesforce lead assignment
 
 ### Can't Open LinkedIn
 
-- ✅ Ensure you're on a LinkedIn profile page
-- ✅ Check that the LinkedIn URL is correct
-- ✅ Try refreshing the page
+**Possible Causes & Solutions:**
+
+| Issue | Solution |
+|-------|----------|
+| LinkedIn URL missing in Salesforce | Verify `LinkedIn_Profile_Apollo__c` field is populated |
+| LinkedIn URL invalid | Check URL format in Salesforce lead record |
+| Extension not injected | Refresh LinkedIn page and try again |
+| Content script error | Check browser console (F12) for errors |
+
+**Debug Steps:**
+1. Verify `LinkedIn_Profile_Apollo__c` field in Salesforce
+2. Check browser console for content script errors
+3. Refresh LinkedIn page
+4. Try navigating to LinkedIn profile manually first
 
 ### Messages Not Generating
 
-- ✅ Select a template from the dropdown
-- ✅ Check that lead data is populated
-- ✅ Verify template variables match available data
+**Possible Causes & Solutions:**
+
+| Issue | Solution |
+|-------|----------|
+| No template selected | Select a template from the dropdown |
+| Lead data missing | Verify lead has required fields (FirstName, LastName, etc.) |
+| Template variables don't match | Check template uses correct variable names (e.g., `{{firstName}}`) |
+| LinkedIn data not scraped | Navigate to LinkedIn profile and wait for scraping to complete |
+
+**Debug Steps:**
+1. Select a template from dropdown
+2. Verify lead data is populated in sidebar
+3. Check template variable names match available data
+4. Navigate to LinkedIn profile and wait for "Profile scraped" message
 
 ### Activities Not Logging
 
-- ✅ Check "Message Sent Logging URL" in settings
-- ✅ Verify n8n workflow is active
-- ✅ Check browser console for errors (F12)
+**Possible Causes & Solutions:**
+
+| Issue | Solution |
+|-------|----------|
+| Zapier webhook URL not configured | Go to Settings (⚙️) and enter your Zapier webhook URL |
+| Zapier workflow not active | Check Zapier workflow is active and webhook is enabled |
+| Network error | Check browser console (F12) for network errors |
+| Salesforce update failed | Check Zapier task history for errors |
+
+**Debug Steps:**
+1. Verify Zapier webhook URL in Settings
+2. Test Zapier connection using "Test Connection" button
+3. Check browser console (F12) for network errors
+4. Check Zapier task history for failed updates
+5. Verify Salesforce Lead `Id` is correct
+
+### n8n/Zapier Connection Errors
+
+**Common Error Messages:**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `n8n returned 404` | Webhook URL incorrect or workflow not active | Verify webhook URL and ensure workflow is active |
+| `n8n returned 500` | n8n workflow error | Check n8n workflow execution logs |
+| `Zapier returned 400` | Invalid payload format | Check Zapier webhook expects correct JSON structure |
+| `Connection failed` | Network issue or webhook down | Verify webhook URLs are accessible |
+
+**Debug Steps:**
+1. Test webhook URLs directly in browser/Postman
+2. Check n8n/Zapier workflow execution history
+3. Verify webhook authentication (if configured)
+4. Check network connectivity
+
+### Template Management Issues
+
+**Possible Causes & Solutions:**
+
+| Issue | Solution |
+|-------|----------|
+| Templates not syncing across devices | Templates use `chrome.storage.sync` - ensure Chrome sync is enabled |
+| Template not saving | Check browser console for storage errors |
+| Default templates reappearing | Default templates are system templates - you can hide them but not delete |
 
 ---
 
-## 📚 Documentation
-
-Additional documentation is available in the `documentation/` folder:
-
-- `N8N_COMPLETE_SETUP.md` - Complete n8n workflow setup guide
-- `N8N_WORKFLOW_CODE_COMPLETE.md` - Full n8n node code examples
-- `SECURITY_LEAD_FILTERING.md` - Security and lead filtering details
-- `custom_template_update.md` - Template management implementation
-
----
-
-## 🔒 Security & Privacy
-
-- **Email-Based Authentication**: Uses Chrome's secure identity API
-- **Role-Based Access**: Only shows leads assigned to the logged-in user
-- **No Data Storage**: Leads cached locally only, not sent to external servers
-- **Secure API**: All API calls go through n8n with email validation
-- **Salesforce Security**: SOQL queries filtered by OwnerId at database level
-
----
-
-## 🚧 Development
+## 🔧 Development
 
 ### Project Structure
 
 ```
 velocity-sidebar/
 ├── src/
-│   ├── background/        # Service worker
-│   ├── content/          # LinkedIn scraper
-│   ├── lib/              # Core services (API, auth, storage, templates)
-│   ├── sidepanel/        # Main UI
-│   └── types/            # TypeScript definitions
-├── public/               # Static assets (manifest, icons)
-├── scripts/              # Build scripts
-└── documentation/        # Setup and configuration docs
+│   ├── background/
+│   │   └── service-worker.ts    # Message routing, side panel lifecycle
+│   ├── content/
+│   │   └── linkedin-scraper.ts  # DOM scraping with MutationObserver
+│   ├── lib/
+│   │   ├── api.ts               # n8n + Zapier API integration
+│   │   ├── auth.ts              # chrome.identity.getProfileUserInfo
+│   │   ├── storage.ts           # Chrome storage wrapper
+│   │   └── templates.ts         # Message template processing
+│   ├── sidepanel/
+│   │   ├── index.html           # Side panel UI
+│   │   ├── main.ts              # Application logic
+│   │   └── styles.css           # Tailwind styles
+│   └── types/
+│       └── index.ts             # TypeScript interfaces (Salesforce schema)
+├── public/
+│   ├── icons/                   # Extension icons (16, 48, 128px)
+│   └── manifest.json            # Manifest V3 configuration
+├── documentation/               # Setup guides, workflow docs
+├── scripts/                     # Build scripts (copy-manifest, generate-icons)
+├── vite.config.ts               # Vite build configuration
+├── tsconfig.json                # TypeScript configuration
+├── tailwind.config.js           # Tailwind CSS configuration
+└── package.json                 # Dependencies and scripts
 ```
 
 ### Development Commands
@@ -377,7 +752,7 @@ npm run dev
 # Build for production
 npm run build
 
-# Type checking
+# Type checking (no emit)
 npm run typecheck
 
 # Clean build artifacts
@@ -386,38 +761,216 @@ npm run clean
 
 ### Tech Stack
 
-- **TypeScript**: Type-safe JavaScript
-- **Vite**: Fast build tool
-- **Tailwind CSS**: Utility-first CSS framework
-- **Chrome Extension APIs**: Identity, Storage, Side Panel, Content Scripts
+| Technology | Purpose | Version |
+|------------|---------|---------|
+| **TypeScript** | Type-safe JavaScript | 5.3.3 |
+| **Vite** | Build tool and dev server | 5.0.10 |
+| **Tailwind CSS** | Utility-first CSS framework | 3.4.0 |
+| **Chrome Extension APIs** | Identity, Storage, Side Panel, Scripting, Tabs, ClipboardWrite | Manifest V3 |
+
+### Debugging
+
+**Service Worker Logs:**
+1. Open `chrome://extensions/`
+2. Find "SGA Velocity Sidebar"
+3. Click "service worker" link (under "Inspect views")
+4. Check console for service worker logs
+
+**Content Script Logs:**
+1. Open LinkedIn profile page
+2. Open browser console (F12)
+3. Look for `[LinkedIn Scraper]` log messages
+
+**Side Panel Logs:**
+1. Open extension side panel
+2. Open browser console (F12)
+3. Check console for application logs
+
+**Network Requests:**
+1. Open browser DevTools (F12)
+2. Go to Network tab
+3. Filter by "Fetch/XHR"
+4. Look for n8n/Zapier webhook requests
+
+### Testing Checklist
+
+See [`documentation/TESTING_CHECKLIST.md`](documentation/TESTING_CHECKLIST.md) for complete testing procedures.
+
+**Quick Test Checklist:**
+- [ ] Extension loads without errors
+- [ ] Authentication works (email detected)
+- [ ] Leads sync from Salesforce
+- [ ] LinkedIn profiles open correctly
+- [ ] Profile data scrapes successfully
+- [ ] Message templates generate correctly
+- [ ] Activities log to Salesforce
+- [ ] Custom templates save/load correctly
+- [ ] Keyboard shortcuts work
+- [ ] List filtering works
 
 ---
 
-## 📝 Version History
+## 📚 API Reference
+
+### n8n Webhook (GET) - Fetch Leads
+
+**Endpoint:** `GET {n8n-webhook-url}?email={sga-email}`
+
+**Request:**
+```
+GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
+```
+
+**Response:**
+```json
+[
+  {
+    "Id": "00Qxx000000xxxxx",
+    "FirstName": "John",
+    "LastName": "Doe",
+    "Company": "ABC Financial",
+    "Title": "Financial Advisor",
+    "Savvy_Lead_Score__c": 85,
+    "LinkedIn_Profile_Apollo__c": "https://linkedin.com/in/johndoe",
+    "Status": "New",
+    "Prospecting_Step_LinkedIn__c": false,
+    "DoNotCall": false,
+    "Lead_List_Name__c": "Q1 2024 Prospects",
+    "SGA_Self_List_name__c": "High Priority"
+  }
+]
+```
+
+**Error Response:**
+```json
+{
+  "error": "Error message here"
+}
+```
+
+### Zapier Webhook (POST) - Log Activity
+
+**Endpoint:** `POST {zapier-webhook-url}`
+
+**Request:**
+```json
+{
+  "leadId": "00Qxx000000xxxxx",
+  "sgaEmail": "sga@savvywealth.com",
+  "timestamp": "2024-12-15T10:30:00Z",
+  "action": "linkedin_sent"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Error message here"
+}
+```
+
+---
+
+## 🔒 Security & Privacy
+
+### Data Access
+
+**What Data is Accessed:**
+- Chrome profile email (via `chrome.identity.getProfileUserInfo`)
+- Salesforce lead records (via n8n webhook)
+- LinkedIn profile data (via content script scraping)
+
+**What Data is Stored:**
+- User email (cached locally for faster startup)
+- Lead records (cached locally, not synced)
+- User templates (synced via Chrome sync storage)
+- API configuration (webhook URLs, stored locally)
+
+**What Data is NOT Stored:**
+- LinkedIn messages
+- Salesforce passwords or tokens
+- Personal browsing data
+- Analytics or tracking data
+
+### Privacy
+
+- **No External Tracking**: Extension does not send data to analytics services
+- **Local Storage Only**: Leads cached locally, not sent to external servers
+- **Secure API Calls**: All API calls go through n8n/Zapier with email validation
+- **Chrome Sync**: Only user templates sync across devices (via Chrome's secure sync)
+
+### Security
+
+- **Email Domain Validation**: Only `@savvywealth.com` emails allowed
+- **Role-Based Access**: SOQL queries filtered by `OwnerId` at database level
+- **No OAuth Tokens**: Uses Chrome Identity API (no token management)
+- **Secure Storage**: Uses Chrome's secure storage APIs
+
+---
+
+## 📝 Changelog
 
 ### v3.1.0 (Current)
+
+**New Features:**
 - ✅ Support for `SGA_Self_List_name__c` field
-- ✅ Custom user templates with CRUD operations
+- ✅ Custom user templates with full CRUD operations
 - ✅ Fuzzy search for list filtering
 - ✅ Alphabetical sorting of leads
 - ✅ Enhanced security and email validation
 - ✅ Improved UI/UX
 
+**Improvements:**
+- Better error handling for webhook connections
+- Improved LinkedIn scraping reliability
+- Enhanced template management UI
+- Better keyboard shortcut support
+
 ### v3.0.0
-- Initial release with core functionality
-- Salesforce integration via n8n
+
+**Initial Release:**
+- Core functionality with Salesforce integration
 - LinkedIn profile scraping
 - Message template system
 - Activity logging
+- Role-based access control
+
+---
+
+## 📚 Documentation
+
+Additional documentation is available in the `documentation/` folder:
+
+| Document | Description |
+|----------|-------------|
+| [`N8N_COMPLETE_SETUP.md`](documentation/N8N_COMPLETE_SETUP.md) | Complete n8n workflow setup guide |
+| [`N8N_WORKFLOW_CODE_COMPLETE.md`](documentation/N8N_WORKFLOW_CODE_COMPLETE.md) | Full n8n node code examples |
+| [`N8N_SALESFORCE_NODE_CONFIG.md`](documentation/N8N_SALESFORCE_NODE_CONFIG.md) | Salesforce node configuration details |
+| [`WEBHOOK_SETUP_GUIDE.md`](documentation/WEBHOOK_SETUP_GUIDE.md) | n8n and Zapier webhook setup guide |
+| [`SECURITY_LEAD_FILTERING.md`](documentation/SECURITY_LEAD_FILTERING.md) | Security and lead filtering details |
+| [`custom_template_update.md`](documentation/custom_template_update.md) | Template management implementation |
+| [`TESTING_CHECKLIST.md`](documentation/TESTING_CHECKLIST.md) | Complete testing procedures |
+| [`TESTING_GUIDE.md`](documentation/TESTING_GUIDE.md) | Testing guide and best practices |
+| [`BUILD_INSTRUCTIONS.md`](documentation/BUILD_INSTRUCTIONS.md) | Build and deployment instructions |
 
 ---
 
 ## 🤝 Support
 
 For issues, questions, or feature requests:
-- Check the `documentation/` folder for setup guides
-- Review troubleshooting section above
-- Contact your Savvy Wealth admin
+
+1. **Check Documentation**: Review the `documentation/` folder for setup guides
+2. **Review Troubleshooting**: See [Troubleshooting](#-troubleshooting) section above
+3. **Check Browser Console**: Open DevTools (F12) and check for errors
+4. **Contact Admin**: Reach out to your Savvy Wealth admin for assistance
 
 ---
 
@@ -429,11 +982,8 @@ Proprietary - Savvy Wealth Internal Use Only
 
 ## 🙏 Acknowledgments
 
-Built for Savvy Wealth SGAs to accelerate LinkedIn outreach and increase lead engagement.
-
----
+Built for Savvy Wealth Strategic Growth Advisors to accelerate LinkedIn outreach and increase lead engagement.
 
 **Version:** 3.1.0  
 **Last Updated:** December 2024  
 **Maintained by:** Savvy Wealth Development Team
-
