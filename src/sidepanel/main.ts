@@ -117,6 +117,9 @@ const elements = {
   autoAdvanceToggle: document.getElementById('auto-advance-toggle') as HTMLInputElement,
   fluxCapacitorToggle: document.getElementById('flux-capacitor-toggle') as HTMLInputElement,
   fluxIndicator: document.getElementById('flux-indicator') as HTMLSpanElement,
+  recruiterRedirectToggle: document.getElementById('recruiter-redirect-toggle') as HTMLInputElement,
+  autoOpenMessageToggle: document.getElementById('auto-open-message-toggle') as HTMLInputElement,
+  recruiterIndicator: document.getElementById('recruiter-indicator') as HTMLSpanElement,
   testN8nBtn: document.getElementById('test-n8n-btn') as HTMLButtonElement,
   testN8nLoggingBtn: document.getElementById('test-n8n-logging-btn') as HTMLButtonElement,
   saveSettingsBtn: document.getElementById('save-settings-btn') as HTMLButtonElement,
@@ -224,9 +227,10 @@ async function init(): Promise<void> {
     }
   });
   
-  // 9. Initialize Flux Capacitor indicator
+  // 9. Initialize mode indicators
   const settings = await getSettings();
   updateFluxIndicator(settings.fluxCapacitorEnabled);
+  updateRecruiterIndicator(settings.recruiterRedirectEnabled);
   
   state.isLoading = false;
   console.log('[Main] ✓ Initialization complete');
@@ -324,6 +328,15 @@ function setupEventListeners(): void {
   elements.settingsBtn.addEventListener('click', openSettings);
   elements.closeSettings.addEventListener('click', closeSettingsModal);
   elements.saveSettingsBtn.addEventListener('click', handleSaveSettings);
+  
+  // Add recruiter mode toggle dependency
+  elements.recruiterRedirectToggle.addEventListener('change', () => {
+    elements.autoOpenMessageToggle.disabled = !elements.recruiterRedirectToggle.checked;
+    // If disabling recruiter mode, also disable auto-open
+    if (!elements.recruiterRedirectToggle.checked) {
+      elements.autoOpenMessageToggle.checked = false;
+    }
+  });
   
   // Template Manager Event Listeners
   elements.manageTemplatesBtn?.addEventListener('click', openTemplateModal);
@@ -1450,6 +1463,12 @@ async function openSettings(): Promise<void> {
   elements.n8nLoggingUrlInput.value = settings.n8nLoggingWebhookUrl;
   elements.autoAdvanceToggle.checked = settings.autoAdvanceOnSend;
   elements.fluxCapacitorToggle.checked = settings.fluxCapacitorEnabled;
+  elements.recruiterRedirectToggle.checked = settings.recruiterRedirectEnabled;
+  elements.autoOpenMessageToggle.checked = settings.autoOpenMessageComposer;
+
+  // Auto-open is only relevant when Recruiter mode is enabled
+  elements.autoOpenMessageToggle.disabled = !settings.recruiterRedirectEnabled;
+  
   elements.settingsModal.classList.remove('hidden');
 }
 
@@ -1470,22 +1489,40 @@ function updateFluxIndicator(enabled: boolean): void {
   }
 }
 
+/**
+ * Update the Recruiter Mode indicator visibility
+ */
+function updateRecruiterIndicator(enabled: boolean): void {
+  if (elements.recruiterIndicator) {
+    if (enabled) {
+      elements.recruiterIndicator.classList.remove('hidden');
+    } else {
+      elements.recruiterIndicator.classList.add('hidden');
+    }
+  }
+}
+
 async function handleSaveSettings(): Promise<void> {
   const n8nUrl = elements.n8nUrlInput.value.trim();
   const n8nLoggingUrl = elements.n8nLoggingUrlInput.value.trim();
   const autoAdvance = elements.autoAdvanceToggle.checked;
   const fluxEnabled = elements.fluxCapacitorToggle.checked;
+  const recruiterEnabled = elements.recruiterRedirectToggle.checked;
+  const autoOpenEnabled = elements.autoOpenMessageToggle.checked;
   
   await setSettings({ 
     n8nWebhookUrl: n8nUrl, 
     n8nLoggingWebhookUrl: n8nLoggingUrl, 
     autoAdvanceOnSend: autoAdvance,
-    fluxCapacitorEnabled: fluxEnabled
+    fluxCapacitorEnabled: fluxEnabled,
+    recruiterRedirectEnabled: recruiterEnabled,
+    autoOpenMessageComposer: autoOpenEnabled
   });
   await setApiConfig({ n8nWebhookUrl: n8nUrl, n8nLoggingWebhookUrl: n8nLoggingUrl });
   
-  // Update flux indicator visibility
+  // Update indicators visibility
   updateFluxIndicator(fluxEnabled);
+  updateRecruiterIndicator(recruiterEnabled);
   
   showToast('Settings saved!', 'success');
   closeSettingsModal();

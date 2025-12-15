@@ -33,6 +33,7 @@ A streamlined Chrome Extension that:
 - ✅ Supports custom message templates for A/B testing and personalization
 - ✅ Handles Salesforce pagination automatically (unlimited lead counts)
 - ✅ **The Flux Capacitor** ⚡ - Power-user mode for high-velocity outreach (88+ messages/hour)
+- ✅ **Recruiter Mode** 🎯 - Auto-redirect to LinkedIn Recruiter profiles with auto-open message composer
 
 ---
 
@@ -175,7 +176,37 @@ Accelerate your workflow with keyboard shortcuts:
 
 **Why "Flux Capacitor"?** Because once you hit 88 messages per hour, you're going to see some serious velocity.
 
-### 7. Human-in-the-Loop Design
+### 7. Recruiter Mode 🎯 ("The Bounce")
+
+**LinkedIn Recruiter Integration** - Automatically redirect from public LinkedIn profiles to LinkedIn Recruiter profiles for enhanced outreach capabilities.
+
+**Enable in Settings** - Toggle "Recruiter Mode" in the settings modal (requires LinkedIn Recruiter license).
+
+**When Enabled:**
+- **Auto-Redirect**: Public profiles (`/in/`) automatically redirect to Recruiter profiles (`/talent/profile/`)
+- **Entity URN Extraction**: Automatically extracts LinkedIn Recruiter Entity URN from public profiles
+- **Recruiter-Specific Scraping**: Scrapes data from Recruiter profile pages (different DOM structure)
+- **Auto-Open Message Composer**: Optionally auto-opens the message composer when arriving at a Recruiter profile
+- **Visual Indicator**: 🎯 RECRUITER badge appears in the header when active
+- **Works with Flux Capacitor**: Seamlessly integrates with Flux Capacitor mode for maximum velocity
+
+**How It Works:**
+1. When you navigate to a public LinkedIn profile (`/in/username`), the extension detects it
+2. Extracts the Entity URN (Recruiter Member ID) from the page
+3. Automatically redirects to the Recruiter profile URL (`/talent/profile/{entityUrn}`)
+4. Scrapes Recruiter-specific profile data (name, headline, location, company, education)
+5. If "Auto-Open Message Composer" is enabled, automatically clicks the Message button
+6. Message composer opens with the recipient pre-filled
+
+**Auto-Open Message Composer (Sub-Feature):**
+- **Enable Separately**: Toggle "Auto-Open Message Composer" in settings (only works when Recruiter Mode is enabled)
+- **Smart Detection**: Prevents double-opening by detecting if composer is already open (checks URL and DOM)
+- **One-Time Per Profile**: Opens once per profile visit, won't reopen on URL changes
+- **Perfect for High-Velocity**: Combined with Flux Capacitor, enables ultra-fast outreach workflows
+
+**Why "The Bounce"?** Because it bounces you from public profiles to Recruiter profiles automatically, giving you access to Recruiter-only features like InMail credits and enhanced messaging tools.
+
+### 8. Human-in-the-Loop Design
 
 **LinkedIn Compliance**
 - You control every message before sending
@@ -363,6 +394,8 @@ Access settings via the ⚙️ icon in the extension footer.
 | **Message Sent Logging URL** | n8n logging webhook URL for logging activities to Salesforce | Yes |
 | **Auto-advance after marking sent** | Automatically move to next lead after marking current as sent | No |
 | **The Flux Capacitor** | Power-user mode for high-velocity outreach (see [Flux Capacitor](#6-the-flux-capacitor--power-user-mode)) | No |
+| **Recruiter Mode** | Auto-redirect to LinkedIn Recruiter profiles (requires LinkedIn Recruiter license) | No |
+| **Auto-Open Message Composer** | Automatically opens message composer on Recruiter profiles (requires Recruiter Mode) | No |
 
 ### n8n Webhook Setup
 
@@ -493,6 +526,69 @@ POST https://your-n8n-instance.com/webhook/log-activity
 
 **Note**: When Flux Capacitor is enabled, Auto-Advance is automatically disabled to prevent double navigation. You maintain full manual control over when to move to the next lead.
 
+### Recruiter Mode + Flux Capacitor Workflow (Ultra-High-Velocity Mode)
+
+**The Ultimate Outreach Workflow** - Combine Recruiter Mode with Flux Capacitor for maximum efficiency.
+
+**Enable Both Features:**
+1. Click the settings icon (⚙️) in the extension footer
+2. Enable **"Recruiter Mode"** (requires LinkedIn Recruiter license)
+3. Enable **"Auto-Open Message Composer"** (sub-feature of Recruiter Mode)
+4. Enable **"The Flux Capacitor"** (power-user mode)
+5. Click "Save Settings"
+6. Look for both 🎯 RECRUITER and ⚡ FLUX badges in the header
+
+**Complete Workflow (88+ Messages/Hour):**
+
+1. **Navigate to Lead**: Press `→` (right arrow) in the sidebar
+   - Extension navigates to LinkedIn profile in same window
+   - If public profile (`/in/`), automatically redirects to Recruiter profile (`/talent/profile/`)
+   - Message is auto-copied to clipboard
+   - Message composer automatically opens (if Auto-Open enabled)
+
+2. **Write Message Title**: Type the subject line in the message composer
+   - Subject field is already focused and ready
+
+3. **Paste Message**: Press `Ctrl+V` / `Cmd+V` to paste your message
+   - Message was auto-copied from sidebar
+   - Paste directly into the message body
+
+4. **Send Message**: Click "Send" button in LinkedIn Recruiter composer
+   - Uses your InMail credits
+   - Message is sent via LinkedIn Recruiter
+
+5. **Mark as Sent in Salesforce**: Press `Ctrl+S` / `Cmd+S`
+   - Works even when typing in the message composer
+   - Updates `Prospecting_Step_LinkedIn__c = true` in Salesforce
+   - No need to click back to sidebar
+
+6. **Move to Next Lead**: Click sidebar (or press `→` again)
+   - Sidebar is still open and ready
+   - Press `→` to navigate to next lead
+   - Process repeats automatically
+
+**The Complete Sequence:**
+```
+Press → → Type Title → Ctrl+V → Click Send → Ctrl+S → Click Sidebar → Press →
+```
+
+**Result**: Ultra-high-velocity outreach with minimal clicks and maximum efficiency!
+
+**Key Benefits:**
+- ✅ No manual navigation (auto-redirect to Recruiter)
+- ✅ No manual message copying (auto-copied to clipboard)
+- ✅ No manual composer opening (auto-opens message box)
+- ✅ No context switching (everything in one window)
+- ✅ Keyboard-driven workflow (minimal mouse usage)
+- ✅ One-click Salesforce logging (`Ctrl+S` works anywhere)
+- ✅ Seamless lead progression (arrow keys move between leads)
+
+**Perfect For:**
+- High-volume outreach sessions
+- Recruiters with LinkedIn Recruiter licenses
+- SGAs who want maximum efficiency
+- Anyone looking to touch 88+ leads per hour
+
 ### Custom Templates
 
 **Create Template:**
@@ -605,6 +701,9 @@ graph TB
 - **Pattern**: MutationObserver (waits for React hydration, not setTimeout-based)
 - **SPA Navigation**: Observes URL changes for React routing
 - **Page Support**: Profile pages, Talent Hub, LinkedIn Recruiter
+- **Recruiter Mode**: Auto-redirects public profiles to Recruiter profiles
+- **Recruiter Scraping**: Specialized DOM selectors for Recruiter profile pages
+- **Message Composer Detection**: Smart detection prevents double-opening
 
 ### Security Model
 
@@ -974,6 +1073,13 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
   - Same-window navigation (no new tabs)
   - Quick mark sent with `Ctrl+S` / `Cmd+S` hotkey
   - Visual indicator when active
+- ✅ **Recruiter Mode** 🎯 ("The Bounce") - LinkedIn Recruiter integration
+  - Auto-redirect from public profiles to Recruiter profiles
+  - Automatic Entity URN extraction
+  - Recruiter-specific profile scraping
+  - Auto-open message composer option
+  - Seamless integration with Flux Capacitor
+  - Visual indicator when active
 - ✅ Support for `SGA_Self_List_name__c` field
 - ✅ Custom user templates with full CRUD operations
 - ✅ Fuzzy search for list filtering
@@ -987,6 +1093,8 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 - Enhanced template management UI
 - Better keyboard shortcut support
 - Smart UX integration: Auto-Advance automatically disabled when Flux Capacitor is enabled
+- Smart message composer detection (prevents double-opening)
+- Robust DOM selector fallback strategies for Recruiter pages
 
 ### v3.0.0
 
@@ -1015,6 +1123,7 @@ Additional documentation is available in the `documentation/` folder:
 | [`TESTING_GUIDE.md`](documentation/TESTING_GUIDE.md) | Testing guide and best practices |
 | [`BUILD_INSTRUCTIONS.md`](documentation/BUILD_INSTRUCTIONS.md) | Build and deployment instructions |
 | [`flux_capacitor_implementation.md`](flux_capacitor_implementation.md) | Complete Flux Capacitor implementation guide |
+| [`recruiter_redirect_upgrade.md`](documentation/recruiter_redirect_upgrade.md) | Recruiter Mode implementation guide |
 
 ---
 

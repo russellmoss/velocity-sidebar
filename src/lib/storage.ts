@@ -309,13 +309,17 @@ export async function duplicateTemplate(
 export interface AppSettings extends ApiConfig {
   autoAdvanceOnSend: boolean;
   fluxCapacitorEnabled: boolean;  // Power-user mode for high-velocity outreach
+  recruiterRedirectEnabled: boolean;  // Auto-redirect public profiles to LinkedIn Recruiter
+  autoOpenMessageComposer: boolean;  // Auto-click Message button on Recruiter profile
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   n8nWebhookUrl: '',
   n8nLoggingWebhookUrl: '',
   autoAdvanceOnSend: true,
-  fluxCapacitorEnabled: false  // Disabled by default - power users opt-in
+  fluxCapacitorEnabled: false,  // Disabled by default - power users opt-in
+  recruiterRedirectEnabled: false,  // Disabled by default - requires LinkedIn Recruiter access
+  autoOpenMessageComposer: false  // Disabled by default - sub-feature of Recruiter Mode
 };
 
 export async function getSettings(): Promise<AppSettings> {

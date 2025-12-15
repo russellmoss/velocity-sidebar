@@ -42,6 +42,10 @@
           <span id="flux-indicator" class="hidden ml-2 text-xs bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full font-semibold animate-pulse">
             ⚡ FLUX
           </span>
+          <!-- Recruiter Mode Active Indicator -->
+          <span id="recruiter-indicator" class="hidden ml-2 text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full font-semibold">
+            🎯 RECRUITER
+          </span>
         </div>
         <div id="auth-status" class="text-sm text-gray-300"></div>
       </div>
@@ -315,6 +319,36 @@
               <li>• Auto-copies message to clipboard</li>
               <li>• <kbd class="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1 py-0.5 bg-gray-100 rounded text-xs">S</kbd> marks as sent</li>
             </ul>
+          </div>
+          <!-- Recruiter Mode ("The Bounce") -->
+          <div class="border-t pt-4 mt-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🎯</span>
+                <label class="text-sm font-semibold text-gray-800">Recruiter Mode</label>
+              </div>
+              <input type="checkbox" id="recruiter-redirect-toggle" class="w-4 h-4 text-savvy-green rounded">
+            </div>
+            <p class="text-xs text-gray-500 mb-2">Auto-redirect to LinkedIn Recruiter profiles:</p>
+            <ul class="text-xs text-gray-500 space-y-1 ml-4">
+              <li>• Public profiles → Recruiter profiles</li>
+              <li>• Automatic Entity URN extraction</li>
+              <li>• Scrapes Recruiter-specific data</li>
+              <li>• Works with Flux Capacitor mode</li>
+            </ul>
+            <p class="text-xs text-amber-600 mt-2 mb-3">⚠️ Requires LinkedIn Recruiter license</p>
+            
+            <!-- Sub-option: Auto-Open Message Composer -->
+            <div class="ml-6 border-l-2 border-gray-200 pl-3 mt-3">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm">✉️</span>
+                  <label class="text-xs font-medium text-gray-700">Auto-Open Message Composer</label>
+                </div>
+                <input type="checkbox" id="auto-open-message-toggle" class="w-3 h-3 text-savvy-green rounded">
+              </div>
+              <p class="text-xs text-gray-400">Automatically opens the message dialog after scraping</p>
+            </div>
           </div>
           <button id="save-settings-btn" class="w-full bg-savvy-green hover:bg-savvy-green-dark text-white py-2 rounded-lg font-medium">
             Save Settings
