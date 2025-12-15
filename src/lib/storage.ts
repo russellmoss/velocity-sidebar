@@ -308,12 +308,14 @@ export async function duplicateTemplate(
 
 export interface AppSettings extends ApiConfig {
   autoAdvanceOnSend: boolean;
+  fluxCapacitorEnabled: boolean;  // Power-user mode for high-velocity outreach
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   n8nWebhookUrl: '',
   n8nLoggingWebhookUrl: '',
-  autoAdvanceOnSend: true
+  autoAdvanceOnSend: true,
+  fluxCapacitorEnabled: false  // Disabled by default - power users opt-in
 };
 
 export async function getSettings(): Promise<AppSettings> {

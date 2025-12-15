@@ -38,6 +38,10 @@
           <div class="w-8 h-8 bg-savvy-green rounded-full flex items-center justify-center font-bold">S</div>
           <h1 class="text-lg font-semibold">SGA Velocity</h1>
           <span class="text-xs text-gray-400 ml-1">v3.1</span>
+          <!-- Flux Capacitor Active Indicator -->
+          <span id="flux-indicator" class="hidden ml-2 text-xs bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+            ⚡ FLUX
+          </span>
         </div>
         <div id="auth-status" class="text-sm text-gray-300"></div>
       </div>
@@ -294,6 +298,23 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-gray-700">Auto-advance after marking sent</label>
             <input type="checkbox" id="auto-advance-toggle" class="w-4 h-4 text-savvy-green rounded" checked>
+          </div>
+          <!-- Flux Capacitor Mode -->
+          <div class="border-t pt-4 mt-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">⚡</span>
+                <label class="text-sm font-semibold text-gray-800">The Flux Capacitor</label>
+              </div>
+              <input type="checkbox" id="flux-capacitor-toggle" class="w-4 h-4 text-savvy-green rounded">
+            </div>
+            <p class="text-xs text-gray-500 mb-2">Power-user mode for high-velocity outreach:</p>
+            <ul class="text-xs text-gray-500 space-y-1 ml-4">
+              <li>• ← → arrows go directly to LinkedIn profile</li>
+              <li>• Same window navigation (no new tabs)</li>
+              <li>• Auto-copies message to clipboard</li>
+              <li>• <kbd class="px-1 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1 py-0.5 bg-gray-100 rounded text-xs">S</kbd> marks as sent</li>
+            </ul>
           </div>
           <button id="save-settings-btn" class="w-full bg-savvy-green hover:bg-savvy-green-dark text-white py-2 rounded-lg font-medium">
             Save Settings

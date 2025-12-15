@@ -115,6 +115,8 @@ const elements = {
   n8nUrlInput: document.getElementById('n8n-url-input') as HTMLInputElement,
   n8nLoggingUrlInput: document.getElementById('n8n-logging-url-input') as HTMLInputElement,
   autoAdvanceToggle: document.getElementById('auto-advance-toggle') as HTMLInputElement,
+  fluxCapacitorToggle: document.getElementById('flux-capacitor-toggle') as HTMLInputElement,
+  fluxIndicator: document.getElementById('flux-indicator') as HTMLSpanElement,
   testN8nBtn: document.getElementById('test-n8n-btn') as HTMLButtonElement,
   testN8nLoggingBtn: document.getElementById('test-n8n-logging-btn') as HTMLButtonElement,
   saveSettingsBtn: document.getElementById('save-settings-btn') as HTMLButtonElement,
@@ -222,6 +224,10 @@ async function init(): Promise<void> {
     }
   });
   
+  // 9. Initialize Flux Capacitor indicator
+  const settings = await getSettings();
+  updateFluxIndicator(settings.fluxCapacitorEnabled);
+  
   state.isLoading = false;
   console.log('[Main] ✓ Initialization complete');
 }
@@ -234,8 +240,8 @@ function setupEventListeners(): void {
   elements.retryAuthBtn.addEventListener('click', handleRetryAuth);
   elements.syncBtn.addEventListener('click', handleSync);
   
-  elements.prevLead.addEventListener('click', () => navigateLead(-1));
-  elements.nextLead.addEventListener('click', () => navigateLead(1));
+  elements.prevLead.addEventListener('click', () => navigateLead(-1).catch(console.error));
+  elements.nextLead.addEventListener('click', () => navigateLead(1).catch(console.error));
   
   elements.templateSelect.addEventListener('change', handleTemplateChange);
   elements.messageInput.addEventListener('input', updateCharCount);
@@ -891,13 +897,73 @@ function displayLead(lead: EnrichedLead): void {
   if (elements.templateSelect.value) handleTemplateChange();
 }
 
-function navigateLead(direction: number): void {
+/**
+ * Navigate to next/previous lead
+ * When Flux Capacitor is enabled:
+ * - Navigates to LinkedIn profile in same window
+ * - Auto-copies message to clipboard
+ */
+async function navigateLead(direction: number): Promise<void> {
   const filteredLeads = getFilteredLeads();
   const newIndex = state.currentIndex + direction;
-  if (newIndex >= 0 && newIndex < filteredLeads.length) {
-    state.currentIndex = newIndex;
-    state.currentProfile = null;
-    updateLeadUI();
+  
+  if (newIndex < 0 || newIndex >= filteredLeads.length) {
+    return; // Out of bounds
+  }
+  
+  state.currentIndex = newIndex;
+  state.currentProfile = null;
+  updateLeadUI();
+  
+  // Check if Flux Capacitor is enabled
+  const settings = await getSettings();
+  if (settings.fluxCapacitorEnabled) {
+    const lead = filteredLeads[newIndex];
+    
+    // Auto-copy message to clipboard
+    await fluxAutoCopy();
+    
+    // Navigate to LinkedIn profile in same window
+    // Use linkedInUrl (from enriched lead) or fallback to LinkedIn_Profile_Apollo__c
+    const linkedInUrl = lead.linkedInUrl || lead.LinkedIn_Profile_Apollo__c;
+    if (linkedInUrl) {
+      await fluxNavigateToProfile(linkedInUrl);
+    }
+  }
+}
+
+/**
+ * Flux Capacitor: Auto-copy current message to clipboard
+ */
+async function fluxAutoCopy(): Promise<void> {
+  const messageText = elements.messageInput.value;
+  
+  if (messageText && messageText.trim()) {
+    try {
+      await navigator.clipboard.writeText(messageText);
+      showToast('⚡ Message copied!', 'success');
+    } catch (err) {
+      console.error('[Flux] Failed to copy:', err);
+    }
+  }
+}
+
+/**
+ * Flux Capacitor: Navigate to LinkedIn profile in same window
+ */
+async function fluxNavigateToProfile(url: string): Promise<void> {
+  try {
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (tab?.id) {
+      // Update the current tab's URL instead of opening a new one
+      await chrome.tabs.update(tab.id, { url: url });
+    }
+  } catch (err) {
+    console.error('[Flux] Navigation error:', err);
+    // Fallback: open in same window via window.open with _top
+    window.open(url, '_top');
   }
 }
 
@@ -1063,8 +1129,9 @@ async function handleMarkSent(): Promise<void> {
       
       const settings = await getSettings();
       const filteredLeads = getFilteredLeads();
-      if (settings.autoAdvanceOnSend && state.currentIndex < filteredLeads.length - 1) {
-        setTimeout(() => navigateLead(1), 500);
+      // Auto-advance only if Flux Capacitor is disabled (Flux already navigates to profile)
+      if (settings.autoAdvanceOnSend && !settings.fluxCapacitorEnabled && state.currentIndex < filteredLeads.length - 1) {
+        setTimeout(() => navigateLead(1).catch(console.error), 500);
       } else {
         elements.markSentBtn.textContent = '✓ Already Sent';
       }
@@ -1382,6 +1449,7 @@ async function openSettings(): Promise<void> {
   elements.n8nUrlInput.value = settings.n8nWebhookUrl;
   elements.n8nLoggingUrlInput.value = settings.n8nLoggingWebhookUrl;
   elements.autoAdvanceToggle.checked = settings.autoAdvanceOnSend;
+  elements.fluxCapacitorToggle.checked = settings.fluxCapacitorEnabled;
   elements.settingsModal.classList.remove('hidden');
 }
 
@@ -1389,13 +1457,35 @@ function closeSettingsModal(): void {
   elements.settingsModal.classList.add('hidden');
 }
 
+/**
+ * Update the Flux Capacitor indicator visibility
+ */
+function updateFluxIndicator(enabled: boolean): void {
+  if (elements.fluxIndicator) {
+    if (enabled) {
+      elements.fluxIndicator.classList.remove('hidden');
+    } else {
+      elements.fluxIndicator.classList.add('hidden');
+    }
+  }
+}
+
 async function handleSaveSettings(): Promise<void> {
   const n8nUrl = elements.n8nUrlInput.value.trim();
   const n8nLoggingUrl = elements.n8nLoggingUrlInput.value.trim();
   const autoAdvance = elements.autoAdvanceToggle.checked;
+  const fluxEnabled = elements.fluxCapacitorToggle.checked;
   
-  await setSettings({ n8nWebhookUrl: n8nUrl, n8nLoggingWebhookUrl: n8nLoggingUrl, autoAdvanceOnSend: autoAdvance });
+  await setSettings({ 
+    n8nWebhookUrl: n8nUrl, 
+    n8nLoggingWebhookUrl: n8nLoggingUrl, 
+    autoAdvanceOnSend: autoAdvance,
+    fluxCapacitorEnabled: fluxEnabled
+  });
   await setApiConfig({ n8nWebhookUrl: n8nUrl, n8nLoggingWebhookUrl: n8nLoggingUrl });
+  
+  // Update flux indicator visibility
+  updateFluxIndicator(fluxEnabled);
   
   showToast('Settings saved!', 'success');
   closeSettingsModal();
@@ -1429,24 +1519,47 @@ async function handleTestN8nLogging(): Promise<void> {
 // Keyboard Shortcuts
 // -----------------------------------------------------------------------------
 
-function handleKeyboard(e: KeyboardEvent): void {
-  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+async function handleKeyboard(e: KeyboardEvent): Promise<void> {
+  const isInputFocused = e.target instanceof HTMLInputElement || 
+                         e.target instanceof HTMLTextAreaElement;
+  
+  // Handle input-focused shortcuts
+  if (isInputFocused) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target === elements.messageInput) {
       e.preventDefault();
-      handleCopy();
+      await handleCopy();
+    }
+    // Allow Ctrl+S in inputs when Flux is enabled
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      const settings = await getSettings();
+      if (settings.fluxCapacitorEnabled) {
+        e.preventDefault();
+        await handleMarkSent();
+        showToast('⚡ Marked as sent!', 'success');
+      }
     }
     return;
   }
   
+  // Handle non-input shortcuts
   switch (e.key) {
-    case 'ArrowLeft': navigateLead(-1); break;
-    case 'ArrowRight': navigateLead(1); break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      await navigateLead(-1);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      await navigateLead(1);
+      break;
   }
   
-  if (e.metaKey || e.ctrlKey) {
-    if (e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      handleMarkSent();
+  // Ctrl/Cmd + S: Mark as sent (when Flux is enabled)
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    const settings = await getSettings();
+    if (settings.fluxCapacitorEnabled) {
+      await handleMarkSent();
+      showToast('⚡ Marked as sent!', 'success');
     }
   }
 }

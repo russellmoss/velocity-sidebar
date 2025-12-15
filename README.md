@@ -32,6 +32,7 @@ A streamlined Chrome Extension that:
 - ✅ Works within LinkedIn's restrictions (human-in-the-loop design)
 - ✅ Supports custom message templates for A/B testing and personalization
 - ✅ Handles Salesforce pagination automatically (unlimited lead counts)
+- ✅ **The Flux Capacitor** ⚡ - Power-user mode for high-velocity outreach (88+ messages/hour)
 
 ---
 
@@ -147,14 +148,34 @@ Auto-populate messages with lead data:
 
 Accelerate your workflow with keyboard shortcuts:
 
-| Shortcut | Action |
-|----------|--------|
-| `⌘+→` / `Ctrl+→` | Navigate to next lead |
-| `⌘+←` / `Ctrl+←` | Navigate to previous lead |
-| `⌘+S` / `Ctrl+S` | Mark current lead as sent |
-| `Escape` | Close modals |
+| Shortcut | Action | Notes |
+|----------|--------|-------|
+| `→` / `←` | Navigate to next/previous lead | With Flux Capacitor: also opens LinkedIn profile & auto-copies message |
+| `⌘+S` / `Ctrl+S` | Mark current lead as sent | Only works when Flux Capacitor is enabled |
+| `⌘+Enter` / `Ctrl+Enter` | Copy message to clipboard | When message input is focused |
+| `Escape` | Close modals | Closes settings, template manager, or delete confirmation modals |
 
-### 6. Human-in-the-Loop Design
+### 6. The Flux Capacitor ⚡ (Power-User Mode)
+
+**High-Velocity Outreach Mode** - Transform your workflow into a hyper-efficient LinkedIn outreach machine.
+
+**Enable in Settings** - Toggle "The Flux Capacitor" in the settings modal to activate power-user mode.
+
+**When Enabled:**
+- **Direct Navigation**: Arrow keys (← →) navigate directly to the lead's LinkedIn profile in the same window
+- **Auto-Copy**: Message is automatically copied to clipboard when navigating to a lead
+- **Same Window**: No new tabs - navigation happens in the current browser window
+- **Quick Mark Sent**: `Ctrl+S` / `Cmd+S` hotkey marks the current lead as sent (works even when typing in inputs)
+- **Visual Indicator**: ⚡ FLUX badge appears in the header when active
+
+**Smart UX Integration:**
+- Auto-Advance is automatically disabled when Flux Capacitor is enabled (prevents double navigation)
+- Maintains manual control over when to move to the next lead
+- Perfect for high-volume outreach sessions
+
+**Why "Flux Capacitor"?** Because once you hit 88 messages per hour, you're going to see some serious velocity.
+
+### 7. Human-in-the-Loop Design
 
 **LinkedIn Compliance**
 - You control every message before sending
@@ -251,11 +272,12 @@ All activities are logged directly in Salesforce, providing:
 
 ### For SGAs
 
-- **Speed**: Touch 3-5x more leads per week
+- **Speed**: Touch 3-5x more leads per week (up to 88+ messages per hour with Flux Capacitor ⚡)
 - **Organization**: Never lose track of who you've contacted
 - **Personalization**: Messages automatically customized with lead data
 - **Flexibility**: Create and test different message templates
 - **Efficiency**: No more switching between multiple tools
+- **Power-User Mode**: Flux Capacitor enables hyper-efficient workflows for high-volume outreach
 - **Compliance**: All activities logged in Salesforce automatically
 
 ### For Savvy Wealth
@@ -340,6 +362,7 @@ Access settings via the ⚙️ icon in the extension footer.
 | **Lead List Workflow URL** | n8n webhook URL for fetching leads from Salesforce | Yes |
 | **Message Sent Logging URL** | n8n logging webhook URL for logging activities to Salesforce | Yes |
 | **Auto-advance after marking sent** | Automatically move to next lead after marking current as sent | No |
+| **The Flux Capacitor** | Power-user mode for high-velocity outreach (see [Flux Capacitor](#6-the-flux-capacitor--power-user-mode)) | No |
 
 ### n8n Webhook Setup
 
@@ -438,14 +461,37 @@ POST https://your-n8n-instance.com/webhook/log-activity
    - Use fuzzy search to quickly find lists
 4. **Select Lead**: Click on a lead from the list
 5. **View Details**: See lead information in the sidebar (name, company, title, lead score)
-6. **Open LinkedIn**: Click "Open LinkedIn" button
+6. **Open LinkedIn**: Click "Open LinkedIn" button (or use arrow keys if Flux Capacitor is enabled)
 7. **Generate Message**: 
    - Select a template from the dropdown
    - Message auto-populates with lead data
    - Customize if needed
-8. **Copy Message**: Click "📋 Copy Message" button
+8. **Copy Message**: Click "📋 Copy Message" button (or auto-copied if Flux Capacitor is enabled)
 9. **Paste & Send**: Paste into LinkedIn message and send
-10. **Mark Sent**: Click "✓ Sent" to log in Salesforce
+10. **Mark Sent**: Click "✓ Sent" button (or press `Ctrl+S` / `Cmd+S` if Flux Capacitor is enabled)
+
+### Flux Capacitor Workflow (Power-User Mode)
+
+**Enable Flux Capacitor:**
+1. Click the settings icon (⚙️) in the extension footer
+2. Scroll to "The Flux Capacitor" section
+3. Toggle the checkbox to enable
+4. Click "Save Settings"
+5. Look for the ⚡ FLUX badge in the header (confirms it's active)
+
+**When Enabled**, the workflow becomes even faster:
+
+1. **Navigate**: Press `→` (right arrow) to move to next lead
+   - Automatically opens LinkedIn profile in same window
+   - Message is auto-copied to clipboard
+   - Toast notification confirms copy
+2. **Review & Send**: Review the LinkedIn profile, paste message, and send
+3. **Mark Sent**: Press `Ctrl+S` / `Cmd+S` to mark as sent (works even when typing)
+4. **Repeat**: Press `→` again for the next lead
+
+**Result**: Touch 3-5x more leads per hour with minimal friction!
+
+**Note**: When Flux Capacitor is enabled, Auto-Advance is automatically disabled to prevent double navigation. You maintain full manual control over when to move to the next lead.
 
 ### Custom Templates
 
@@ -922,6 +968,12 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 ### v3.1.0 (Current)
 
 **New Features:**
+- ✅ **The Flux Capacitor** ⚡ - Power-user mode for high-velocity outreach
+  - Direct navigation to LinkedIn profiles via arrow keys
+  - Auto-copy messages to clipboard on navigation
+  - Same-window navigation (no new tabs)
+  - Quick mark sent with `Ctrl+S` / `Cmd+S` hotkey
+  - Visual indicator when active
 - ✅ Support for `SGA_Self_List_name__c` field
 - ✅ Custom user templates with full CRUD operations
 - ✅ Fuzzy search for list filtering
@@ -934,6 +986,7 @@ GET https://your-n8n-instance.com/webhook/sga-leads?email=sga@savvywealth.com
 - Improved LinkedIn scraping reliability
 - Enhanced template management UI
 - Better keyboard shortcut support
+- Smart UX integration: Auto-Advance automatically disabled when Flux Capacitor is enabled
 
 ### v3.0.0
 
@@ -961,6 +1014,7 @@ Additional documentation is available in the `documentation/` folder:
 | [`TESTING_CHECKLIST.md`](documentation/TESTING_CHECKLIST.md) | Complete testing procedures |
 | [`TESTING_GUIDE.md`](documentation/TESTING_GUIDE.md) | Testing guide and best practices |
 | [`BUILD_INSTRUCTIONS.md`](documentation/BUILD_INSTRUCTIONS.md) | Build and deployment instructions |
+| [`flux_capacitor_implementation.md`](flux_capacitor_implementation.md) | Complete Flux Capacitor implementation guide |
 
 ---
 
